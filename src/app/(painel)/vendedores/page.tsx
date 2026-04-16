@@ -108,7 +108,7 @@ function FormVendedor({ usuarioId, onVoltar }: { usuarioId?: string; onVoltar: (
   const [buscaCliente, setBuscaCliente] = useState('')
   const [form, setForm] = useState({
     nome: '', email: '', senha: '', perfil: 'REPRESENTANTE',
-    telefone: '', estado: 'MG', metaMensal: '', ativo: true,
+    telefone: '', estados: ['MG'], metaMensal: '', ativo: true,
   })
   const [carregado, setCarregado] = useState(false)
 
@@ -123,7 +123,7 @@ function FormVendedor({ usuarioId, onVoltar }: { usuarioId?: string; onVoltar: (
         senha:      '',
         perfil:     data.perfil ?? 'REPRESENTANTE',
         telefone:   data.vendedor?.telefone ?? '',
-        estado:     data.vendedor?.regiao?.nome ?? 'MG',
+        estados:    data.vendedor?.estados?.length ? data.vendedor.estados : [data.vendedor?.regiao?.nome ?? 'MG'],
         metaMensal: data.vendedor?.metaMensal ? String(Math.round(Number(data.vendedor.metaMensal))) : '',
         ativo:      data.ativo ?? true,
       })
@@ -152,7 +152,7 @@ function FormVendedor({ usuarioId, onVoltar }: { usuarioId?: string; onVoltar: (
           senha:      form.senha,
           perfil:     form.perfil,
           telefone:   form.telefone || undefined,
-          estado:     form.estado,
+          estados:    form.estados,
           metaMensal: form.metaMensal ? Number(form.metaMensal) : 0,
           ativo:      form.ativo,
         }),
@@ -241,14 +241,23 @@ function FormVendedor({ usuarioId, onVoltar }: { usuarioId?: string; onVoltar: (
                 <MapPin size={14} className="text-brand-600" /> Região e meta
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="label">Estado de atuação *</label>
-                  <select className="input" value={form.estado}
-                    onChange={e => setForm(p => ({ ...p, estado: e.target.value }))}>
-                    <option value="">Selecione</option>
-                    {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
-                  </select>
-                  <p className="text-xs text-gray-400 mt-1">Verá apenas clientes deste estado</p>
+                <div className="col-span-2">
+                  <label className="label">Estados de atuação *</label>
+                  <div className="grid grid-cols-6 gap-2 mt-1">
+                    {ESTADOS.map(e => (
+                      <label key={e} className="flex items-center gap-1 cursor-pointer">
+                        <input type="checkbox" checked={form.estados.includes(e)}
+                          onChange={ev => setForm(p => ({
+                            ...p,
+                            estados: ev.target.checked
+                              ? [...p.estados, e]
+                              : p.estados.filter(s => s !== e)
+                          }))} />
+                        <span className="text-xs text-gray-700">{e}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">Verá apenas clientes destes estados</p>
                 </div>
                 <div>
                   <label className="label">Meta mensal (R$)</label>
@@ -263,7 +272,7 @@ function FormVendedor({ usuarioId, onVoltar }: { usuarioId?: string; onVoltar: (
               <button className="btn-secondary" onClick={onVoltar}>Cancelar</button>
               <button className="btn-primary flex items-center gap-1.5"
                 onClick={() => salvar.mutate()}
-                disabled={!form.nome || !form.email || (!isEdit && !form.senha) || !form.estado || salvar.isPending}>
+                disabled={!form.nome || !form.email || (!isEdit && !form.senha) || !form.estados.length || salvar.isPending}>
                 <Save size={14} />
                 {salvar.isPending ? 'Salvando...' : isEdit ? 'Salvar alterações' : 'Criar vendedor'}
               </button>
