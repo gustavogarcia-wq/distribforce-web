@@ -40,7 +40,7 @@ export default function PainelLayout({ children }: { children: React.ReactNode }
     </div>
   )
 
-  const initials = usuario.nome.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
+  const initials = usuario.nome.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
 
   return (
     <div className="flex h-screen bg-gray-50">
