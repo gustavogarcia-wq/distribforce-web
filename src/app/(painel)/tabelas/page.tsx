@@ -328,7 +328,7 @@ function EditarTabela({ tabelaId, onVoltar }: { tabelaId: string; onVoltar: () =
                       </div>
                     ) : (
                       <span className={temPreco ? 'font-medium text-gray-900' : 'text-gray-300'}>
-                        {temPreco ? fmt(Number(item.precoUnitario)) : 'Sem preço'}
+                        {temPreco ? fmt(Number((item as any).precoUnitario)) : 'Sem preço'}
                       </span>
                     )}
                   </td>
