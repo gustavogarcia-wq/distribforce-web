@@ -290,7 +290,7 @@ function FormVendedor({ usuarioId, onVoltar }: { usuarioId?: string; onVoltar: (
             {!clientesData?.clientes?.length ? (
               <div className="flex flex-col items-center justify-center h-32 text-gray-400">
                 <p className="text-sm">Nenhum cliente vinculado ainda</p>
-                <p className="text-xs mt-1">Clientes do estado {form.estado} aparecerão aqui após o sync</p>
+                <p className="text-xs mt-1">Clientes do estados {form.estados.join(", ")} aparecerão aqui após o sync</p>
               </div>
             ) : (
               <div className="card overflow-hidden">
