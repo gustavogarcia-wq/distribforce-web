@@ -58,8 +58,8 @@ export default function PedidosPage() {
   })
 
   const gerarPDF = useMutation({
-    mutationFn: (id: string) => api.get(`/pedidos/${id}/espelho`).then(r => r.data),
-    onSuccess: (data) => window.open(data.url, '_blank'),
+    mutationFn: (id: string) => api.get(`/pedidos/${id}/espelho`, { responseType: 'blob' }).then(r => r.data),
+    onSuccess: (data) => window.open(URL.createObjectURL(data), '_blank'),
     onError: () => toast.error('Erro ao gerar PDF'),
   })
 
