@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { useAuth } from '@/lib/auth'
 import { toast } from 'sonner'
 import { Search, Send, Eye, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react'
 import clsx from 'clsx'
@@ -33,6 +34,8 @@ export default function PedidosPage() {
   const [busca, setBusca] = useState('')
   const [status, setStatus] = useState('')
   const [detalheId, setDetalheId] = useState<string | null>(null)
+  const [modoEdicao, setModoEdicao] = useState(false)
+  const { usuario } = useAuth()
 
   const { data, isLoading } = useQuery({
     queryKey: ['pedidos', page, busca, status],
@@ -127,7 +130,7 @@ export default function PedidosPage() {
               <tbody className="divide-y divide-gray-100">
                 {pedidos.map((p: any) => (
                   <tr key={p.id} className={clsx('hover:bg-gray-50 transition-colors cursor-pointer', detalheId === p.id && 'bg-brand-50', p.status === 'CONFIRMADO' && 'bg-green-50/50')}
-                    onClick={() => setDetalheId(p.id === detalheId ? null : p.id)}>
+                    onClick={() => { setDetalheId(p.id === detalheId ? null : p.id); setModoEdicao(false) }}>
                     <td className="px-4 py-3 font-mono text-gray-500">{p.id.slice(0, 8).toUpperCase()}</td>
                     <td className="px-4 py-3 font-medium text-gray-900 max-w-[140px] truncate">{p.cliente?.razaoSocial}</td>
                     <td className="px-4 py-3 text-gray-600 max-w-[120px] truncate">{p.vendedor?.usuario?.nome}</td>
@@ -146,7 +149,7 @@ export default function PedidosPage() {
                           </button>
                         )}
                         <button className="badge-gray cursor-pointer hover:bg-gray-200 transition-colors p-1"
-                          onClick={() => setDetalheId(p.id === detalheId ? null : p.id)}>
+                          onClick={() => { setDetalheId(p.id === detalheId ? null : p.id); setModoEdicao(false) }}>
                           <Eye size={12} />
                         </button>
                       </div>
@@ -178,7 +181,7 @@ export default function PedidosPage() {
               <div className="text-sm font-semibold text-gray-900">{detalhe.id.slice(0, 8).toUpperCase()}</div>
               <div className="text-xs text-gray-400 mt-0.5">{detalhe.cliente?.razaoSocial}</div>
             </div>
-            <button onClick={() => setDetalheId(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+            <div className="flex items-center gap-2">{usuario?.perfil === "ADMIN" && (detalhe.status === "ORCAMENTO" || detalhe.status === "AGUARDANDO_APROVACAO") && (<button onClick={() => setModoEdicao(!modoEdicao)} className={clsx("text-xs px-2.5 py-1 rounded border", modoEdicao ? "bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100" : "bg-brand-50 border-brand-200 text-brand-700 hover:bg-brand-100")}>{modoEdicao ? "Cancelar edição" : "Editar"}</button>)}<button onClick={() => { setDetalheId(null); setModoEdicao(false) }} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button></div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-5 space-y-5">
