@@ -58,7 +58,7 @@ export default function PedidosPage() {
 
   const { data: tabelasLista } = useQuery({
     queryKey: ['tabelas-lista'],
-    queryFn: () => api.get('/tabelas-preco').then(r => r.data),
+    queryFn: () => api.get('/tabelas').then(r => r.data),
     enabled: modoEdicao,
   })
 
