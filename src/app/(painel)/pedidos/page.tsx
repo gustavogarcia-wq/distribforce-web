@@ -241,19 +241,55 @@ export default function PedidosPage() {
 
             {/* Info */}
             <div className="grid grid-cols-2 gap-3">
-              {[
-                ['Vendedor', detalhe.vendedor?.usuario?.nome],
-                ['Região', detalhe.vendedor?.regiao?.nome],
-                ['Tabela', detalhe.tabela?.nome],
-                ['Data', new Date(detalhe.criadoEm).toLocaleDateString('pt-BR')],
-                ['CNPJ cliente', detalhe.cliente?.cnpj ?? '—'],
-                ['Omie nº', detalhe.omieNumero ?? '—'],
-              ].map(([l, v]) => (
-                <div key={l}>
-                  <div className="text-xs text-gray-400">{l}</div>
-                  <div className="text-xs font-medium text-gray-900 mt-0.5">{v}</div>
-                </div>
-              ))}
+              <div>
+                <div className="text-xs text-gray-400">Vendedor</div>
+                {modoEdicao && dadosEdicao ? (
+                  <select
+                    className="w-full text-xs font-medium text-gray-900 mt-0.5 border border-gray-200 rounded px-2 py-1 bg-white"
+                    value={dadosEdicao.vendedorId ?? ''}
+                    onChange={e => setDadosEdicao({ ...dadosEdicao, vendedorId: e.target.value || null })}
+                  >
+                    <option value="">— Sem vendedor —</option>
+                    {usuariosLista?.filter((u: any) => u.vendedor).map((u: any) => (
+                      <option key={u.vendedor.id} value={u.vendedor.id}>{u.nome}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="text-xs font-medium text-gray-900 mt-0.5">{detalhe.vendedor?.usuario?.nome ?? '—'}</div>
+                )}
+              </div>
+              <div>
+                <div className="text-xs text-gray-400">Região</div>
+                <div className="text-xs font-medium text-gray-900 mt-0.5">{detalhe.vendedor?.regiao?.nome ?? '—'}</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-400">Tabela</div>
+                {modoEdicao && dadosEdicao ? (
+                  <select
+                    className="w-full text-xs font-medium text-gray-900 mt-0.5 border border-gray-200 rounded px-2 py-1 bg-white"
+                    value={dadosEdicao.tabelaId}
+                    onChange={e => setDadosEdicao({ ...dadosEdicao, tabelaId: e.target.value })}
+                  >
+                    {tabelasLista?.map((t: any) => (
+                      <option key={t.id} value={t.id}>{t.nome}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="text-xs font-medium text-gray-900 mt-0.5">{detalhe.tabela?.nome}</div>
+                )}
+              </div>
+              <div>
+                <div className="text-xs text-gray-400">Data</div>
+                <div className="text-xs font-medium text-gray-900 mt-0.5">{new Date(detalhe.criadoEm).toLocaleDateString('pt-BR')}</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-400">CNPJ cliente</div>
+                <div className="text-xs font-medium text-gray-900 mt-0.5">{detalhe.cliente?.cnpj ?? '—'}</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-400">Omie nº</div>
+                <div className="text-xs font-medium text-gray-900 mt-0.5">{detalhe.omieNumero ?? '—'}</div>
+              </div>
             </div>
 
             {/* Itens */}
