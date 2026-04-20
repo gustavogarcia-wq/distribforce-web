@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
@@ -37,6 +37,7 @@ export default function PedidosPage() {
   const [modoEdicao, setModoEdicao] = useState(false)
   const { usuario } = useAuth()
 
+
   const { data, isLoading } = useQuery({
     queryKey: ['pedidos', page, busca, status],
     queryFn: () => api.get('/pedidos', { params: { page, limit: 15, busca: busca || undefined, status: status || undefined } }).then(r => r.data),
@@ -47,6 +48,34 @@ export default function PedidosPage() {
     queryFn: () => api.get(`/pedidos/${detalheId}`).then(r => r.data),
     enabled: !!detalheId,
   })
+  const [dadosEdicao, setDadosEdicao] = useState<any>(null)
+
+  const { data: usuariosLista } = useQuery({
+    queryKey: ['usuarios-lista'],
+    queryFn: () => api.get('/usuarios').then(r => r.data),
+    enabled: modoEdicao,
+  })
+
+  const { data: tabelasLista } = useQuery({
+    queryKey: ['tabelas-lista'],
+    queryFn: () => api.get('/tabelas-preco').then(r => r.data),
+    enabled: modoEdicao,
+  })
+
+  useEffect(() => {
+    if (modoEdicao && detalhe) {
+      setDadosEdicao({
+        vendedorId: detalhe.vendedorId ?? null,
+        tabelaId: detalhe.tabelaId,
+        clienteId: detalhe.clienteId,
+        descontoPct: Number(detalhe.descontoPct),
+        observacao: detalhe.observacao ?? '',
+      })
+    } else {
+      setDadosEdicao(null)
+    }
+  }, [modoEdicao, detalhe])
+
 
   const aprovar = useMutation({
     mutationFn: (id: string) => api.patch(`/pedidos/${id}/status`, { status: 'CONFIRMADO', observacao: 'Aprovado pelo gestor' }),
