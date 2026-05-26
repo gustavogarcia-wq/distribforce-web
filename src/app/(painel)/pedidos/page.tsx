@@ -304,15 +304,45 @@ export default function PedidosPage() {
             <div>
               <div className="text-xs font-medium text-gray-500 mb-2">Itens</div>
               <div className="space-y-1.5">
-                {detalhe.itens?.map((item: any) => (
-                  <div key={item.id} className="flex items-center justify-between py-1.5 border-b border-gray-50">
-                    <div>
-                      <div className="text-xs font-medium text-gray-900">{item.produto?.nome}</div>
-                      <div className="text-xs text-gray-400">{Number(item.quantidade)} × {fmt(item.precoUnitario)} {Number(item.descontoPct) > 0 ? `(${Number(item.descontoPct)}% desc.)` : ''}</div>
+                {(modoEdicao && dadosEdicao ? dadosEdicao.itens : detalhe.itens)?.map((item: any, idx: number) => {
+                  const qtd = Number(item.quantidade) || 0
+                  const preco = Number(item.precoUnitario) || 0
+                  const desc = Number(item.descontoPct) || 0
+                  const totalItem = qtd * preco * (1 - desc / 100)
+                  const nome = item.produtoNome ?? item.produto?.nome
+                  if (modoEdicao && dadosEdicao) {
+                    return (
+                      <div key={idx} className="py-2 border-b border-gray-50">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <div className="text-xs font-medium text-gray-900 truncate flex-1">{nome}</div>
+                          <button onClick={() => setDadosEdicao({ ...dadosEdicao, itens: dadosEdicao.itens.filter((_: any, i: number) => i !== idx) })} className="text-red-500 hover:text-red-700 text-sm flex-shrink-0" title="Remover item">🗑️</button>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs">
+                          <div className="flex items-center gap-0.5 border border-gray-200 rounded">
+                            <button onClick={() => { const novos = [...dadosEdicao.itens]; novos[idx] = { ...novos[idx], quantidade: Math.max(1, qtd - 1) }; setDadosEdicao({ ...dadosEdicao, itens: novos }) }} className="px-1.5 py-0.5 text-gray-600 hover:bg-gray-100">−</button>
+                            <input type="number" min={1} value={qtd} onChange={e => { const novos = [...dadosEdicao.itens]; novos[idx] = { ...novos[idx], quantidade: Math.max(1, Number(e.target.value) || 1) }; setDadosEdicao({ ...dadosEdicao, itens: novos }) }} className="w-10 text-center text-xs border-x border-gray-200 px-1 py-0.5 outline-none" />
+                            <button onClick={() => { const novos = [...dadosEdicao.itens]; novos[idx] = { ...novos[idx], quantidade: qtd + 1 }; setDadosEdicao({ ...dadosEdicao, itens: novos }) }} className="px-1.5 py-0.5 text-gray-600 hover:bg-gray-100">+</button>
+                          </div>
+                          <span className="text-gray-400">×</span>
+                          <div className="flex items-center gap-1">
+                            <span className="text-gray-400">R$</span>
+                            <input type="number" min={0} step={0.01} value={preco} onChange={e => { const novos = [...dadosEdicao.itens]; novos[idx] = { ...novos[idx], precoUnitario: Number(e.target.value) || 0 }; setDadosEdicao({ ...dadosEdicao, itens: novos }) }} className="w-20 text-xs border border-gray-200 rounded px-1.5 py-0.5 text-right" />
+                          </div>
+                          <span className="ml-auto text-xs font-semibold text-gray-900">{fmt(totalItem)}</span>
+                        </div>
+                      </div>
+                    )
+                  }
+                  return (
+                    <div key={item.id} className="flex items-center justify-between py-1.5 border-b border-gray-50">
+                      <div>
+                        <div className="text-xs font-medium text-gray-900">{nome}</div>
+                        <div className="text-xs text-gray-400">{qtd} × {fmt(preco)} {desc > 0 ? `(${desc}% desc.)` : ""}</div>
+                      </div>
+                      <div className="text-xs font-semibold text-gray-900">{fmt(item.total ?? totalItem)}</div>
                     </div>
-                    <div className="text-xs font-semibold text-gray-900">{fmt(item.total)}</div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
 
