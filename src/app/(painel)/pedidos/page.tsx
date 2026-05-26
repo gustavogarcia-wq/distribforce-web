@@ -345,6 +345,39 @@ export default function PedidosPage() {
                 })}
               </div>
             </div>
+            {modoEdicao && dadosEdicao && (
+              <div className="mt-2">
+                <select
+                  value=""
+                  onChange={e => {
+                    if (!e.target.value) return
+                    const item = produtosTabela?.find((p: any) => p.produtoId === e.target.value)
+                    if (!item) return
+                    setDadosEdicao({
+                      ...dadosEdicao,
+                      itens: [...dadosEdicao.itens, {
+                        produtoId: item.produtoId,
+                        produtoNome: item.produto?.nome,
+                        quantidade: 1,
+                        precoUnitario: Number(item.precoUnitario),
+                        descontoPct: 0,
+                      }],
+                    })
+                    e.target.value = ''
+                  }}
+                  className="w-full text-xs border border-dashed border-brand-300 rounded px-2 py-1.5 bg-brand-50 text-brand-700 cursor-pointer"
+                >
+                  <option value="">+ Adicionar produto…</option>
+                  {produtosTabela
+                    ?.filter((p: any) => !dadosEdicao.itens.some((i: any) => i.produtoId === p.produtoId))
+                    .map((p: any) => (
+                      <option key={p.produtoId} value={p.produtoId}>
+                        {p.produto?.nome} — R$ {Number(p.precoUnitario).toFixed(2)}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
 
             {/* Totais */}
             <div className="bg-gray-50 rounded-lg p-3 space-y-1.5">
