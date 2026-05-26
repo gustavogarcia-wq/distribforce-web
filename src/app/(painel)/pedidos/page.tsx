@@ -70,11 +70,19 @@ export default function PedidosPage() {
         clienteId: detalhe.clienteId,
         descontoPct: Number(detalhe.descontoPct),
         observacao: detalhe.observacao ?? '',
+        itens: (detalhe.itens ?? []).map((i: any) => ({ produtoId: i.produtoId, produtoNome: i.produto?.nome, quantidade: Number(i.quantidade), precoUnitario: Number(i.precoUnitario), descontoPct: Number(i.descontoPct) })),
       })
     } else {
       setDadosEdicao(null)
     }
   }, [modoEdicao, detalhe])
+
+  const { data: produtosTabela } = useQuery({
+    queryKey: ['produtos-tabela', dadosEdicao?.tabelaId],
+    queryFn: () => api.get(`/tabelas/${dadosEdicao.tabelaId}/itens`, { params: { limit: 500 } }).then(r => r.data),
+    enabled: modoEdicao && !!dadosEdicao?.tabelaId,
+  })
+
 
 
   const aprovar = useMutation({
