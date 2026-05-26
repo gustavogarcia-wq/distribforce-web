@@ -310,9 +310,38 @@ export default function PedidosPage() {
 
             {/* Totais */}
             <div className="bg-gray-50 rounded-lg p-3 space-y-1.5">
-              <div className="flex justify-between text-xs text-gray-500"><span>Subtotal</span><span>{fmt(detalhe.subtotal)}</span></div>
-              <div className="flex justify-between text-xs text-green-600"><span>Desconto ({Number(detalhe.descontoPct).toFixed(1)}%)</span><span>− {fmt(Number(detalhe.subtotal) - Number(detalhe.total))}</span></div>
-              <div className="flex justify-between text-sm font-semibold text-gray-900 pt-1.5 border-t border-gray-200"><span>Total</span><span>{fmt(detalhe.total)}</span></div>
+              {(() => {
+                const subtotal = Number(detalhe.subtotal)
+                const descontoPct = modoEdicao && dadosEdicao ? Number(dadosEdicao.descontoPct) || 0 : Number(detalhe.descontoPct)
+                const total = subtotal * (1 - descontoPct / 100)
+                const descontoValor = subtotal - total
+                return (
+                  <>
+                    <div className="flex justify-between text-xs text-gray-500"><span>Subtotal</span><span>{fmt(subtotal)}</span></div>
+                    <div className="flex justify-between items-center text-xs text-green-600">
+                      <span className="flex items-center gap-1">
+                        Desconto (
+                        {modoEdicao && dadosEdicao ? (
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            step={0.1}
+                            value={dadosEdicao.descontoPct}
+                            onChange={e => setDadosEdicao({ ...dadosEdicao, descontoPct: Number(e.target.value) || 0 })}
+                            className="w-12 text-xs text-green-700 border border-green-300 rounded px-1 py-0 text-right bg-white"
+                          />
+                        ) : (
+                          descontoPct.toFixed(1)
+                        )}
+                        %)
+                      </span>
+                      <span>− {fmt(descontoValor)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm font-semibold text-gray-900 pt-1.5 border-t border-gray-200"><span>Total</span><span>{fmt(total)}</span></div>
+                  </>
+                )
+              })()}
             </div>
 
             {detalhe.observacao && (
