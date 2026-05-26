@@ -103,6 +103,33 @@ export default function PedidosPage() {
     onError: () => toast.error('Erro ao gerar PDF'),
   })
 
+  const salvarEdicao = useMutation({
+    mutationFn: () => api.patch(`/pedidos/${detalheId}`, {
+      vendedorId: dadosEdicao.vendedorId,
+      tabelaId: dadosEdicao.tabelaId,
+      clienteId: dadosEdicao.clienteId,
+      descontoPct: dadosEdicao.descontoPct,
+      observacao: dadosEdicao.observacao || null,
+      itens: dadosEdicao.itens.map((i: any) => ({
+        produtoId: i.produtoId,
+        quantidade: Number(i.quantidade),
+        precoUnitario: Number(i.precoUnitario),
+        descontoPct: Number(i.descontoPct) || 0,
+      })),
+    }),
+    onSuccess: () => {
+      toast.success('Pedido atualizado!')
+      setModoEdicao(false)
+      qc.invalidateQueries({ queryKey: ['pedidos'] })
+      if (detalheId) qc.invalidateQueries({ queryKey: ['pedido', detalheId] })
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message || 'Erro ao salvar pedido'
+      toast.error(msg)
+    },
+  })
+
+
   const pedidos = data?.pedidos ?? []
   const pages = data?.pages ?? 1
 
@@ -382,7 +409,7 @@ export default function PedidosPage() {
             {/* Totais */}
             <div className="bg-gray-50 rounded-lg p-3 space-y-1.5">
               {(() => {
-                const subtotal = Number(detalhe.subtotal)
+                const subtotal = modoEdicao && dadosEdicao ? dadosEdicao.itens.reduce((acc: number, it: any) => acc + (Number(it.quantidade) || 0) * (Number(it.precoUnitario) || 0) * (1 - (Number(it.descontoPct) || 0) / 100), 0) : Number(detalhe.subtotal)
                 const descontoPct = modoEdicao && dadosEdicao ? Number(dadosEdicao.descontoPct) || 0 : Number(detalhe.descontoPct)
                 const total = subtotal * (1 - descontoPct / 100)
                 const descontoValor = subtotal - total
@@ -435,6 +462,25 @@ export default function PedidosPage() {
                 {enviarOmie.isPending ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />}
                 Enviar ao Omie
               </button>
+            )}
+            {modoEdicao && dadosEdicao && (
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  className="btn-secondary text-sm py-2"
+                  onClick={() => setModoEdicao(false)}
+                  disabled={salvarEdicao.isPending}
+                >
+                  Cancelar
+                </button>
+                <button
+                  className="bg-green-600 hover:bg-green-700 text-white text-sm py-2 rounded font-medium flex items-center justify-center gap-2 disabled:opacity-60"
+                  onClick={() => salvarEdicao.mutate()}
+                  disabled={salvarEdicao.isPending || dadosEdicao.itens.length === 0}
+                >
+                  {salvarEdicao.isPending ? <RefreshCw size={14} className="animate-spin" /> : null}
+                  Salvar alterações
+                </button>
+              </div>
             )}
             <button className="btn-secondary w-full flex items-center justify-center gap-2 text-sm"
               onClick={() => gerarPDF.mutate(detalhe.id)} disabled={gerarPDF.isPending}>
