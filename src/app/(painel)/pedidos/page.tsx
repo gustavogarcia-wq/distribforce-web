@@ -35,6 +35,7 @@ export default function PedidosPage() {
   const [status, setStatus] = useState('')
   const [detalheId, setDetalheId] = useState<string | null>(null)
   const [modoEdicao, setModoEdicao] = useState(false)
+  const [descontoModo, setDescontoModo] = useState<'pct' | 'rs'>('pct')
   const { usuario } = useAuth()
 
 
@@ -417,22 +418,34 @@ export default function PedidosPage() {
                   <>
                     <div className="flex justify-between text-xs text-gray-500"><span>Subtotal</span><span>{fmt(subtotal)}</span></div>
                     <div className="flex justify-between items-center text-xs text-green-600">
-                      <span className="flex items-center gap-1">
-                        Desconto (
+                      <span className="flex items-center gap-1.5 flex-wrap">
+                        <span>Desconto</span>
                         {modoEdicao && dadosEdicao ? (
-                          <input
-                            type="number"
-                            min={0}
-                            max={100}
-                            step={0.1}
-                            value={dadosEdicao.descontoPct}
-                            onChange={e => setDadosEdicao({ ...dadosEdicao, descontoPct: Number(e.target.value) || 0 })}
-                            className="w-12 text-xs text-green-700 border border-green-300 rounded px-1 py-0 text-right bg-white"
-                          />
+                          <>
+                            <span className="inline-flex border border-green-300 rounded overflow-hidden">
+                              <button onClick={() => setDescontoModo('pct')} className={`px-1.5 py-0 text-xs ${descontoModo === 'pct' ? 'bg-green-600 text-white' : 'bg-white text-green-700'}`}>%</button>
+                              <button onClick={() => setDescontoModo('rs')} className={`px-1.5 py-0 text-xs border-l border-green-300 ${descontoModo === 'rs' ? 'bg-green-600 text-white' : 'bg-white text-green-700'}`}>R$</button>
+                            </span>
+                            <input
+                              type="number"
+                              min={0}
+                              step={0.01}
+                              value={descontoModo === 'pct' ? Number(dadosEdicao.descontoPct).toFixed(2).replace(/\.?0+$/, '') : descontoValor.toFixed(2)}
+                              onChange={e => {
+                                const v = Number(e.target.value) || 0
+                                if (descontoModo === 'pct') {
+                                  setDadosEdicao({ ...dadosEdicao, descontoPct: Math.min(100, Math.max(0, v)) })
+                                } else {
+                                  const novoPct = subtotal > 0 ? Math.min(100, Math.max(0, (v / subtotal) * 100)) : 0
+                                  setDadosEdicao({ ...dadosEdicao, descontoPct: novoPct })
+                                }
+                              }}
+                              className="w-16 text-xs text-green-700 border border-green-300 rounded px-1 py-0 text-right bg-white"
+                            />
+                          </>
                         ) : (
-                          descontoPct.toFixed(1)
+                          <span>({descontoPct.toFixed(1)}%)</span>
                         )}
-                        %)
                       </span>
                       <span>− {fmt(descontoValor)}</span>
                     </div>
