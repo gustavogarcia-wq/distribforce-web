@@ -86,6 +86,11 @@ export default function PedidosPage() {
 
 
 
+  const enviarParaAprovacao = useMutation({
+    mutationFn: (id: string) => api.patch(`/pedidos/${id}/status`, { status: 'AGUARDANDO_APROVACAO', observacao: 'Enviado para aprovação pelo admin' }),
+    onSuccess: () => { toast.success('Pedido enviado para aprovação!'); qc.invalidateQueries({ queryKey: ['pedidos'] }); if (detalheId) qc.invalidateQueries({ queryKey: ['pedido', detalheId] }) },
+    onError: () => toast.error('Erro ao enviar para aprovação'),
+  })
   const aprovar = useMutation({
     mutationFn: (id: string) => api.patch(`/pedidos/${id}/status`, { status: 'CONFIRMADO', observacao: 'Aprovado pelo gestor' }),
     onSuccess: () => { toast.success('Pedido confirmado!'); qc.invalidateQueries({ queryKey: ['pedidos'] }); if (detalheId) qc.invalidateQueries({ queryKey: ['pedido', detalheId] }) },
@@ -462,6 +467,13 @@ export default function PedidosPage() {
 
           {/* Ações */}
           <div className="p-4 border-t border-gray-100 space-y-2">
+            {detalhe.status === 'ORCAMENTO' && usuario?.perfil === 'ADMIN' && (
+              <button className="btn-primary w-full flex items-center justify-center gap-2"
+                onClick={() => enviarParaAprovacao.mutate(detalhe.id)} disabled={enviarParaAprovacao.isPending}>
+                {enviarParaAprovacao.isPending ? <RefreshCw size={14} className="animate-spin" /> : null}
+                Enviar para aprovação
+              </button>
+            )}
             {detalhe.status === 'AGUARDANDO_APROVACAO' && (
               <button className="btn-primary w-full flex items-center justify-center gap-2"
                 onClick={() => aprovar.mutate(detalhe.id)} disabled={aprovar.isPending}>
