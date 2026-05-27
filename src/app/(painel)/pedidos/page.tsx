@@ -62,6 +62,10 @@ export default function PedidosPage() {
     queryFn: () => api.get('/tabelas').then(r => r.data),
     enabled: modoEdicao,
   })
+  const { data: prazosLista = [] } = useQuery<any[]>({
+    queryKey: ['prazos-pagamento'],
+    queryFn: () => api.get('/prazos-pagamento').then(r => r.data),
+  })
 
   useEffect(() => {
     if (modoEdicao && detalhe) {
@@ -70,7 +74,8 @@ export default function PedidosPage() {
         tabelaId: detalhe.tabelaId,
         clienteId: detalhe.clienteId,
         descontoPct: Number(detalhe.descontoPct),
-        observacao: detalhe.observacao ?? '',
+        observacao: detalhe.observacao ?? "",
+        prazoPagamento: detalhe.prazoPagamento ?? "a_vista",
         itens: (detalhe.itens ?? []).map((i: any) => ({ produtoId: i.produtoId, produtoNome: i.produto?.nome, quantidade: Number(i.quantidade), precoUnitario: Number(i.precoUnitario), descontoPct: Number(i.descontoPct) })),
       })
     } else {
@@ -116,6 +121,7 @@ export default function PedidosPage() {
       clienteId: dadosEdicao.clienteId,
       descontoPct: dadosEdicao.descontoPct,
       observacao: dadosEdicao.observacao || null,
+      prazoPagamento: dadosEdicao.prazoPagamento || null,
       itens: dadosEdicao.itens.map((i: any) => ({
         produtoId: i.produtoId,
         quantidade: Number(i.quantidade),
@@ -326,6 +332,22 @@ export default function PedidosPage() {
               <div>
                 <div className="text-xs text-gray-400">CNPJ cliente</div>
                 <div className="text-xs font-medium text-gray-900 mt-0.5">{detalhe.cliente?.cnpj ?? '—'}</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-400">Prazo</div>
+                {modoEdicao && dadosEdicao ? (
+                  <select
+                    className="w-full text-xs font-medium text-gray-900 mt-0.5 border border-gray-200 rounded px-2 py-1 bg-white"
+                    value={dadosEdicao.prazoPagamento ?? 'a_vista'}
+                    onChange={e => setDadosEdicao({ ...dadosEdicao, prazoPagamento: e.target.value })}
+                  >
+                    {prazosLista.map((p: any) => (
+                      <option key={p.id} value={p.id}>{p.label}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="text-xs font-medium text-gray-900 mt-0.5">{prazosLista.find((p: any) => p.id === detalhe.prazoPagamento)?.label ?? '—'}</div>
+                )}
               </div>
               <div>
                 <div className="text-xs text-gray-400">Omie nº</div>
