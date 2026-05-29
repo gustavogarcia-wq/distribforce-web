@@ -5,8 +5,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { toast } from 'sonner'
-import { Search, Send, Eye, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, Send, Eye, RefreshCw, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import clsx from 'clsx'
+import NovoPedidoPanel from './NovoPedidoPanel'
 
 const STATUS_LABELS: Record<string, string> = {
   ORCAMENTO: 'Orçamento',
@@ -35,6 +36,7 @@ export default function PedidosPage() {
   const [status, setStatus] = useState('')
   const [detalheId, setDetalheId] = useState<string | null>(null)
   const [modoEdicao, setModoEdicao] = useState(false)
+  const [criandoPedido, setCriandoPedido] = useState(false)
   const [descontoModo, setDescontoModo] = useState<'pct' | 'rs'>('pct')
   const { usuario } = useAuth()
 
@@ -151,7 +153,7 @@ export default function PedidosPage() {
       <div className={clsx('flex-1 flex flex-col overflow-hidden transition-all', detalheId ? 'max-w-[60%]' : '')}>
         {/* Topbar */}
         <div className="bg-white border-b border-gray-200 px-6 py-4">
-          <h1 className="text-base font-semibold text-gray-900">Pedidos</h1>
+          <div className="flex items-center justify-between"><h1 className="text-base font-semibold text-gray-900">Pedidos</h1>{usuario?.perfil === "ADMIN" && (<button onClick={() => setCriandoPedido(true)} className="flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs px-3 py-1.5 rounded font-medium"><Plus size={14} />Novo pedido</button>)}</div>
         </div>
 
         {/* Filtros */}
@@ -537,6 +539,7 @@ export default function PedidosPage() {
           </div>
         </div>
       )}
+      {criandoPedido && <NovoPedidoPanel onClose={() => setCriandoPedido(false)} onSuccess={() => { setCriandoPedido(false); qc.invalidateQueries({ queryKey: ["pedidos"] }) }} />}
     </div>
   )
 }
