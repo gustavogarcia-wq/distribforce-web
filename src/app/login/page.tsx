@@ -37,7 +37,7 @@ export default function LoginPage() {
               <rect x="13" y="13" width="8" height="8" rx="2" fill="white" opacity="0.4"/>
             </svg>
           </div>
-          <h1 className="text-xl font-semibold text-gray-900">DistribForce</h1>
+          <h1 className="text-xl font-semibold text-gray-900">TForce</h1>
           <p className="text-sm text-gray-500 mt-1">Painel do gestor</p>
         </div>
 

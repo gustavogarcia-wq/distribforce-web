@@ -57,7 +57,7 @@ export default function PainelLayout({ children }: { children: React.ReactNode }
               </svg>
             </div>
             <div>
-              <div className="text-sm font-semibold text-gray-900">DistribForce</div>
+              <div className="text-sm font-semibold text-gray-900">TForce</div>
               <div className="text-xs text-gray-400">Painel do gestor</div>
             </div>
           </div>

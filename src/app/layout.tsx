@@ -4,7 +4,7 @@ import { Providers } from './providers'
 import { Toaster } from 'sonner'
 
 export const metadata: Metadata = {
-  title: 'DistribForce — Painel do Gestor',
+  title: 'TForce — Painel do Gestor',
   description: 'Sistema de força de vendas',
 }
 
