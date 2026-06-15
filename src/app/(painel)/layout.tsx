@@ -49,11 +49,10 @@ export default function PainelLayout({ children }: { children: React.ReactNode }
         <div className="px-5 py-5 border-b border-gray-100">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 bg-brand-600 rounded-lg flex items-center justify-center">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="3" width="8" height="8" rx="2" fill="white"/>
-                <rect x="13" y="3" width="8" height="8" rx="2" fill="white" opacity="0.7"/>
-                <rect x="3" y="13" width="8" height="8" rx="2" fill="white" opacity="0.7"/>
-                <rect x="13" y="13" width="8" height="8" rx="2" fill="white" opacity="0.4"/>
+              <svg width="18" height="18" viewBox="0 0 100 100" fill="none">
+                <path d="M64 40 L80 82 Q81 85 78 85 L22 85" fill="none" stroke="white" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M22 85 L30 66 L41 71 L48 47 L58 53 L63 38" fill="none" stroke="white" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M63 20 L54 41 L73 41 Z" fill="white"/>
               </svg>
             </div>
             <div>
