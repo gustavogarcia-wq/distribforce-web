@@ -105,7 +105,7 @@ export default function PedidosPage() {
   })
 
   const enviarOmie = useMutation({
-    mutationFn: ({ id, base }: { id: string; base: 'MG' | 'SP' }) => api.post(`/pedidos/${id}/omie`, { base }),
+    mutationFn: (id: string) => api.post(`/pedidos/${id}/omie`),
     onSuccess: () => { toast.success('Pedido enviado ao Omie!'); qc.invalidateQueries({ queryKey: ['pedidos'] }); if (detalheId) qc.invalidateQueries({ queryKey: ['pedido', detalheId] }) },
     onError: (e: any) => toast.error(e.response?.data?.error ?? 'Erro ao enviar ao Omie'),
   })
@@ -222,14 +222,8 @@ export default function PedidosPage() {
                         )}
                         {p.status === 'CONFIRMADO' && (
                           <button className="badge-green cursor-pointer hover:bg-green-100 transition-colors px-2 py-1 flex items-center gap-1"
-                            onClick={() => enviarOmie.mutate({ id: p.id, base: 'MG' })}>
-                            <Send size={10} /> MG
-                          </button>
-                        )}
-                        {p.status === 'CONFIRMADO' && (
-                          <button className="badge-green cursor-pointer hover:bg-green-100 transition-colors px-2 py-1 flex items-center gap-1"
-                            onClick={() => enviarOmie.mutate({ id: p.id, base: 'SP' })}>
-                            <Send size={10} /> SP
+                            onClick={() => enviarOmie.mutate(p.id)}>
+                            <Send size={10} /> Omie
                           </button>
                         )}
                         <button className="badge-gray cursor-pointer hover:bg-gray-200 transition-colors p-1"
@@ -512,16 +506,11 @@ export default function PedidosPage() {
               </button>
             )}
             {detalhe.status === 'CONFIRMADO' && (
-              <div className="flex gap-2">
-                <button className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-                  onClick={() => enviarOmie.mutate({ id: detalhe.id, base: 'MG' })} disabled={enviarOmie.isPending}>
-                  <Send size={14} /> Omie MG
-                </button>
-                <button className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-                  onClick={() => enviarOmie.mutate({ id: detalhe.id, base: 'SP' })} disabled={enviarOmie.isPending}>
-                  <Send size={14} /> Omie SP
-                </button>
-              </div>
+              <button className="w-full flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                onClick={() => enviarOmie.mutate(detalhe.id)} disabled={enviarOmie.isPending}>
+                {enviarOmie.isPending ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />}
+                Enviar ao Omie
+              </button>
             )}
             {modoEdicao && dadosEdicao && (
               <div className="grid grid-cols-2 gap-2">
