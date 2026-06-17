@@ -93,6 +93,11 @@ export default function PedidosPage() {
 
 
 
+  const duplicar = useMutation({
+    mutationFn: (id: string) => api.post(`/pedidos/${id}/duplicar`),
+    onSuccess: () => { toast.success('Pedido duplicado! Criado como orçamento.'); qc.invalidateQueries({ queryKey: ['pedidos'] }); setDetalheId(null); setModoEdicao(false) },
+    onError: (e: any) => toast.error(e.response?.data?.error ?? 'Erro ao duplicar pedido'),
+  })
   const enviarParaAprovacao = useMutation({
     mutationFn: (id: string) => api.patch(`/pedidos/${id}/status`, { status: 'AGUARDANDO_APROVACAO', observacao: 'Enviado para aprovação pelo admin' }),
     onSuccess: () => { toast.success('Pedido enviado para aprovação!'); qc.invalidateQueries({ queryKey: ['pedidos'] }); if (detalheId) qc.invalidateQueries({ queryKey: ['pedido', detalheId] }) },
@@ -265,7 +270,7 @@ export default function PedidosPage() {
               <div className="text-sm font-semibold text-gray-900">{detalhe.id.slice(0, 8).toUpperCase()}</div>
               <div className="text-xs text-gray-400 mt-0.5">{detalhe.cliente?.razaoSocial}</div>
             </div>
-            <div className="flex items-center gap-2">{usuario?.perfil === "ADMIN" && detalhe.status !== "FATURADO" && (<button onClick={() => setModoEdicao(!modoEdicao)} className={clsx("text-xs px-2.5 py-1 rounded border", modoEdicao ? "bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100" : "bg-brand-50 border-brand-200 text-brand-700 hover:bg-brand-100")}>{modoEdicao ? "Cancelar edição" : "Editar"}</button>)}<button onClick={() => { setDetalheId(null); setModoEdicao(false) }} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button></div>
+            <div className="flex items-center gap-2">{usuario?.perfil === "ADMIN" && (<button onClick={() => { if (confirm("Duplicar este pedido? Sera criado um novo orcamento com os mesmos itens.")) duplicar.mutate(detalhe.id) }} disabled={duplicar.isPending} className="text-xs px-2.5 py-1 rounded border bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100">Duplicar</button>)}{usuario?.perfil === "ADMIN" && detalhe.status !== "FATURADO" && (<button onClick={() => setModoEdicao(!modoEdicao)} className={clsx("text-xs px-2.5 py-1 rounded border", modoEdicao ? "bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100" : "bg-brand-50 border-brand-200 text-brand-700 hover:bg-brand-100")}>{modoEdicao ? "Cancelar edição" : "Editar"}</button>)}<button onClick={() => { setDetalheId(null); setModoEdicao(false) }} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button></div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-5 space-y-5">
