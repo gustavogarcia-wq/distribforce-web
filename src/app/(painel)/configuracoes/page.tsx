@@ -4,12 +4,31 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { toast } from 'sonner'
-import { RefreshCw, Plus, CheckCircle, XCircle } from 'lucide-react'
+import { RefreshCw, Plus, CheckCircle, XCircle, Image as ImageIcon, Trash2, Upload } from 'lucide-react'
 
 export default function ConfiguracoesPage() {
   const qc = useQueryClient()
   const [novaTabela, setNovaTabela] = useState({ nome: '', descontoMaximo: 0, ativa: true })
   const [showForm, setShowForm] = useState(false)
+  const [bannerFile, setBannerFile] = useState<File | null>(null)
+  const { data: banner } = useQuery({
+    queryKey: ['banner'],
+    queryFn: () => api.get('/banner').then(r => r.data),
+  })
+  const subirBanner = useMutation({
+    mutationFn: () => {
+      const fd = new FormData()
+      fd.append('imagem', bannerFile as File)
+      return api.post('/banner', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+    },
+    onSuccess: () => { toast.success('Banner atualizado!'); setBannerFile(null); qc.invalidateQueries({ queryKey: ['banner'] }) },
+    onError: () => toast.error('Erro ao subir o banner'),
+  })
+  const removerBanner = useMutation({
+    mutationFn: () => api.delete('/banner'),
+    onSuccess: () => { toast.success('Banner removido!'); qc.invalidateQueries({ queryKey: ['banner'] }) },
+    onError: () => toast.error('Erro ao remover o banner'),
+  })
 
   const { data: tabelas, isLoading: loadTabelas } = useQuery({
     queryKey: ['tabelas'],
@@ -163,6 +182,31 @@ export default function ConfiguracoesPage() {
               ))}
             </div>
           )}
+        </div>
+
+        <div className="card mt-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-base font-semibold text-gray-900">Banner de avisos</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Aparece no app do representante ao abrir. Remova para ocultar.</p>
+            </div>
+          </div>
+          {banner?.ativo ? (
+            <div className="space-y-3">
+              <img src={banner.imagemUrl} alt="Banner atual" className="w-full max-w-md rounded-lg border border-gray-200" />
+              <button onClick={() => removerBanner.mutate()} disabled={removerBanner.isPending} className="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded border border-red-200 bg-red-50 text-red-700 hover:bg-red-100">
+                <Trash2 size={15} /> Remover banner
+              </button>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 mb-3">Nenhum banner ativo no momento.</p>
+          )}
+          <div className="mt-4 flex items-center gap-3">
+            <input type="file" accept="image/*" onChange={(e) => setBannerFile(e.target.files?.[0] ?? null)} className="text-sm" />
+            <button onClick={() => subirBanner.mutate()} disabled={!bannerFile || subirBanner.isPending} className="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded border border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100 disabled:opacity-50">
+              <Upload size={15} /> {banner?.ativo ? 'Substituir' : 'Subir'} banner
+            </button>
+          </div>
         </div>
 
       </div>
