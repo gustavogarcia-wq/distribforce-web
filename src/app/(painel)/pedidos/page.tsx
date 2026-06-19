@@ -51,6 +51,11 @@ export default function PedidosPage() {
     queryFn: () => api.get(`/pedidos/${detalheId}`).then(r => r.data),
     enabled: !!detalheId,
   })
+  const { data: anexos = [] } = useQuery<any[]>({
+    queryKey: ['pedido-anexos', detalheId],
+    queryFn: () => api.get(`/pedidos/${detalheId}/anexos`).then(r => r.data),
+    enabled: !!detalheId,
+  })
   const [dadosEdicao, setDadosEdicao] = useState<any>(null)
 
   const { data: usuariosLista } = useQuery({
@@ -497,6 +502,19 @@ export default function PedidosPage() {
 
             {detalhe.observacao && (
               <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600">{detalhe.observacao}</div>
+            )}
+
+            {anexos.length > 0 && (
+              <div className="mt-4">
+                <div className="text-xs font-medium text-gray-500 mb-2">Documentos anexados ({anexos.length})</div>
+                <div className="flex flex-wrap gap-2">
+                  {anexos.map((a: any) => (
+                    <a key={a.id} href={a.url} target="_blank" rel="noopener noreferrer" className="block w-20 h-20 rounded-lg overflow-hidden border border-gray-200 hover:border-brand-400">
+                      <img src={a.url} alt={a.nomeArquivo ?? 'documento'} className="w-full h-full object-cover" />
+                    </a>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
 
