@@ -150,13 +150,13 @@ function EditarTabela({ tabelaId, onVoltar }: { tabelaId: string; onVoltar: () =
   const { data: produtosData } = useQuery({
     queryKey: ['tabela-itens', tabelaId, busca],
     queryFn: () => api.get(`/tabelas/${tabelaId}/itens`, {
-      params: { busca: busca || undefined, limit: 100 }
+      params: { busca: busca || undefined, limit: 1000 }
     }).then(r => r.data),
   })
 
   const { data: todosProdutos } = useQuery({
     queryKey: ['produtos-todos'],
-    queryFn: () => api.get('/produtos', { params: { limit: 200, ativo: true } }).then(r => r.data),
+    queryFn: () => api.get('/produtos', { params: { limit: 1000, ativo: true } }).then(r => r.data),
   })
 
   const salvarItem = async (produtoId: string, produtoNome: string, valorBase: number) => {
