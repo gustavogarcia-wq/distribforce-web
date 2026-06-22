@@ -495,6 +495,9 @@ export default function PedidosPage() {
                       <span>− {fmt(descontoValor)}</span>
                     </div>
                     <div className="flex justify-between text-sm font-semibold text-gray-900 pt-1.5 border-t border-gray-200"><span>Total</span><span>{fmt(total)}</span></div>
+                    {Number(detalhe.cashbackTotal) > 0 && (
+                      <div className="flex justify-between text-xs text-amber-600"><span>Cashback gerado</span><span>{fmt(Number(detalhe.cashbackTotal))}</span></div>
+                    )}
                   </>
                 )
               })()}
