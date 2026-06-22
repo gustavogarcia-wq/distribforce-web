@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { toast } from 'sonner'
-import { Plus, ChevronRight, Save, ArrowLeft, Percent, DollarSign, Search, Package } from 'lucide-react'
+import { Plus, ChevronRight, Save, ArrowLeft, Percent, DollarSign, Search, Package, Copy, Trash2 } from 'lucide-react'
 import clsx from 'clsx'
 
 function fmt(v: number) {
@@ -36,6 +36,23 @@ function ListaTabelas({ onSelecionar }: { onSelecionar: (id: string) => void }) 
       setForm({ nome: '', descontoMaximo: 0, validade: '', ativa: true })
     },
     onError: (e: any) => toast.error(e.response?.data?.error ?? 'Erro ao criar tabela'),
+  })
+  const duplicar = useMutation({
+    mutationFn: (id: string) => api.post(`/tabelas/${id}/duplicar`),
+    onSuccess: (r: any) => {
+      toast.success(`Tabela duplicada: ${r.data.nome}`)
+      qc.invalidateQueries({ queryKey: ['tabelas'] })
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error ?? 'Erro ao duplicar'),
+  })
+  const excluir = useMutation({
+    mutationFn: (id: string) => api.delete(`/tabelas/${id}`),
+    onSuccess: (r: any) => {
+      if (r.data.acao === 'desativada') toast.success('Tabela desativada (tinha vinculos, historico preservado)')
+      else toast.success('Tabela excluida')
+      qc.invalidateQueries({ queryKey: ['tabelas'] })
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error ?? 'Erro ao excluir'),
   })
 
   return (
@@ -124,6 +141,18 @@ function ListaTabelas({ onSelecionar }: { onSelecionar: (id: string) => void }) 
                     <span>{t._count?.clientesTabelas ?? 0} clientes vinculados</span>
                   </div>
                 </div>
+                <button
+                  className="p-2 text-gray-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors flex-shrink-0"
+                  title="Duplicar tabela"
+                  onClick={(e) => { e.stopPropagation(); duplicar.mutate(t.id) }}>
+                  <Copy size={16} />
+                </button>
+                <button
+                  className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+                  title="Excluir tabela"
+                  onClick={(e) => { e.stopPropagation(); if (confirm(`Excluir a tabela "${t.nome}"? Se houver pedidos/clientes vinculados, ela sera apenas desativada.`)) excluir.mutate(t.id) }}>
+                  <Trash2 size={16} />
+                </button>
                 <ChevronRight size={16} className="text-gray-300 flex-shrink-0" />
               </div>
             ))}
