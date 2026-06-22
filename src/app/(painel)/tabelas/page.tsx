@@ -168,7 +168,7 @@ function ListaTabelas({ onSelecionar }: { onSelecionar: (id: string) => void }) 
 function EditarTabela({ tabelaId, onVoltar }: { tabelaId: string; onVoltar: () => void }) {
   const qc = useQueryClient()
   const [busca, setBusca] = useState('')
-  const [editando, setEditando] = useState<Record<string, { precoFixo: string; descontoPct: string; modo: 'fixo' | 'desconto' }>>({})
+  const [editando, setEditando] = useState<Record<string, { precoFixo: string; descontoPct: string; modo: 'fixo' | 'desconto'; cashback: string }>>({})
   const [salvando, setSalvando] = useState<string | null>(null)
 
   const { data: tabela } = useQuery({
@@ -207,10 +207,12 @@ function EditarTabela({ tabelaId, onVoltar }: { tabelaId: string; onVoltar: () =
         return
       }
 
+      const cashbackVal = Number((ed.cashback || '0').replace(',', '.')) || 0
       await api.put(`/tabelas/${tabelaId}/itens`, [{
         produtoId,
         precoUnitario: Math.round(precoUnitario * 100) / 100,
         descontoMaximo: Number(tabela?.descontoMaximo ?? 0),
+        cashbackUnitario: Math.round(cashbackVal * 100) / 100,
       }])
 
       toast.success(`${produtoNome} atualizado!`)
@@ -232,6 +234,7 @@ function EditarTabela({ tabelaId, onVoltar }: { tabelaId: string; onVoltar: () =
           precoFixo: Number(itemExistente.precoUnitario).toFixed(2).replace('.', ','),
           descontoPct: '0',
           modo: 'fixo',
+          cashback: Number(itemExistente.cashbackUnitario ?? 0).toFixed(2).replace('.', ','),
         }
       }))
     } else {
@@ -241,6 +244,7 @@ function EditarTabela({ tabelaId, onVoltar }: { tabelaId: string; onVoltar: () =
           precoFixo: valorBase ? Number(valorBase).toFixed(2).replace('.', ',') : '',
           descontoPct: '0',
           modo: 'fixo',
+          cashback: '',
         }
       }))
     }
@@ -354,6 +358,15 @@ function EditarTabela({ tabelaId, onVoltar }: { tabelaId: string; onVoltar: () =
                             )}
                           </div>
                         )}
+                        <div className="flex items-center gap-1 mt-1.5">
+                          <span className="text-gray-400 text-xs">Cashback R$</span>
+                          <input
+                            className="input text-xs w-20 py-1"
+                            value={ed.cashback}
+                            onChange={e => setEditando(prev => ({ ...prev, [p.id]: { ...prev[p.id], cashback: e.target.value } }))}
+                            placeholder="0,00"
+                          />
+                        </div>
                       </div>
                     ) : (
                       <span className={temPreco ? 'font-medium text-gray-900' : 'text-gray-300'}>
