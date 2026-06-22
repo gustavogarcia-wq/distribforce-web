@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { Search, Package, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, Package, ChevronLeft, ChevronRight, ImagePlus, Power } from 'lucide-react'
+import { toast } from 'sonner'
 import clsx from 'clsx'
 import Image from 'next/image'
 
@@ -21,7 +22,7 @@ export default function ProdutosPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['produtos', busca, categoria, page, apenasAtivos],
     queryFn: () => api.get('/produtos', {
-      params: { busca: busca || undefined, categoria: categoria || undefined, page, limit: 24, ativo: apenasAtivos || undefined }
+      params: { busca: busca || undefined, categoria: categoria || undefined, page, limit: 24, inativos: apenasAtivos ? undefined : true }
     }).then(r => r.data),
   })
 
@@ -37,6 +38,29 @@ export default function ProdutosPage() {
     queryKey: ['produto', detalheId],
     queryFn: () => api.get(`/produtos/${detalheId}`).then(r => r.data),
     enabled: !!detalheId,
+  })
+  const qc = useQueryClient()
+  const trocarImagem = useMutation({
+    mutationFn: (file: File) => {
+      const fd = new FormData()
+      fd.append('imagem', file)
+      return api.patch(`/produtos/${detalheId}/imagem`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+    },
+    onSuccess: () => {
+      toast.success('Imagem atualizada!')
+      qc.invalidateQueries({ queryKey: ['produto', detalheId] })
+      qc.invalidateQueries({ queryKey: ['produtos'] })
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error ?? 'Erro ao trocar imagem'),
+  })
+  const alternarStatus = useMutation({
+    mutationFn: (ativar: boolean) => api.patch(`/produtos/${detalheId}/${ativar ? 'ativar' : 'desativar'}`),
+    onSuccess: (_r, ativar) => {
+      toast.success(ativar ? 'Produto ativado!' : 'Produto desativado!')
+      qc.invalidateQueries({ queryKey: ['produto', detalheId] })
+      qc.invalidateQueries({ queryKey: ['produtos'] })
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error ?? 'Erro ao alterar status'),
   })
 
   const produtos = data?.produtos ?? []
@@ -72,7 +96,7 @@ export default function ProdutosPage() {
           <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-600">
             <input type="checkbox" checked={apenasAtivos}
               onChange={e => { setApenasAtivos(e.target.checked); setPage(1) }} />
-            Apenas ativos
+            {apenasAtivos ? 'Mostrando ativos' : 'Mostrando desativados'}
           </label>
 
           {(busca || categoria) && (
@@ -169,6 +193,11 @@ export default function ProdutosPage() {
                 </div>
               )}
             </div>
+            <label className="flex items-center justify-center gap-2 text-xs px-3 py-2 rounded-lg border border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100 cursor-pointer">
+              <ImagePlus size={15} /> {detalhe.fotoUrl ? 'Trocar imagem' : 'Adicionar imagem'}
+              <input type="file" accept="image/*" className="hidden" disabled={trocarImagem.isPending}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) trocarImagem.mutate(f) }} />
+            </label>
 
             {/* Status */}
             <div className="flex items-center gap-2">
@@ -177,6 +206,12 @@ export default function ProdutosPage() {
               </span>
               {detalhe.categoria && <span className="badge-gray">{detalhe.categoria}</span>}
             </div>
+            <button
+              onClick={() => alternarStatus.mutate(!detalhe.ativo)}
+              disabled={alternarStatus.isPending}
+              className={`flex items-center justify-center gap-2 text-xs px-3 py-2 rounded-lg border w-full ${detalhe.ativo ? 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100' : 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100'}`}>
+              <Power size={15} /> {detalhe.ativo ? 'Desativar produto' : 'Ativar produto'}
+            </button>
 
             {/* Dados principais */}
             <div className="grid grid-cols-2 gap-3">
