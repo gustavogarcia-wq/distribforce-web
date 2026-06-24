@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { toast } from 'sonner'
@@ -155,22 +155,24 @@ function FormCombo({ comboId, onVoltar }: { comboId?: string; onVoltar: () => vo
     queryKey: ['combo', comboId],
     queryFn: () => api.get(`/combos/${comboId}`).then(r => r.data),
     enabled: isEdit,
-    onSuccess: (data: any) => {
-      setForm({
-        nome: data.nome, descricao: data.descricao ?? '',
-        tabelaId: data.tabelaId ?? '', validadeInicio: '', validadeFim: '', ativo: data.ativo,
-      })
-      setItens(data.itens.map((i: any) => ({
-        produtoId: i.produtoId, nome: i.produto.nome,
-        foto: i.produto.fotoUrl ?? '',
-        valorBase: Number(i.produto.valorUnitario ?? 0),
-        tipo: (i.tipo ?? 'FIXO') as 'FIXO' | 'VARIAVEL',
-        proporcao: i.proporcao != null ? String(i.proporcao) : '1',
-        grupo: i.grupo ?? '',
-        precoEspecial: i.precoEspecial != null ? String(i.precoEspecial) : '0',
-      })))
-    }
-  } as any)
+  })
+
+  useEffect(() => {
+    if (!combo) return
+    setForm({
+      nome: combo.nome, descricao: combo.descricao ?? '',
+      tabelaId: combo.tabelaId ?? '', validadeInicio: '', validadeFim: '', ativo: combo.ativo,
+    })
+    setItens((combo.itens ?? []).map((i: any) => ({
+      produtoId: i.produtoId, nome: i.produto.nome,
+      foto: i.produto.fotoUrl ?? '',
+      valorBase: Number(i.produto.valorUnitario ?? 0),
+      tipo: (i.tipo ?? 'FIXO') as 'FIXO' | 'VARIAVEL',
+      proporcao: i.proporcao != null ? String(i.proporcao) : '1',
+      grupo: i.grupo ?? '',
+      precoEspecial: i.precoEspecial != null ? String(i.precoEspecial) : '0',
+    })))
+  }, [combo])
 
   const { data: tabelas } = useQuery({
     queryKey: ['tabelas'],
