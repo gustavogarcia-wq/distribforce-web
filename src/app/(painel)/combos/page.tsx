@@ -11,6 +11,35 @@ function fmt(v: number) {
   return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
+function num(v: string | number) {
+  if (typeof v === 'number') return v
+  return Number(String(v).replace(',', '.')) || 0
+}
+
+type ItemForm = {
+  produtoId: string
+  nome: string
+  foto: string
+  valorBase: number
+  tipo: 'FIXO' | 'VARIAVEL'
+  proporcao: string
+  grupo: string
+  precoEspecial: string
+}
+
+// Preco "a partir de": 1 unidade de cada grupo variavel + fixos pela proporcao
+function precoBase(itens: ItemForm[]) {
+  const fixos = itens.filter(i => i.tipo === 'FIXO')
+  const variaveis = itens.filter(i => i.tipo === 'VARIAVEL')
+  const totalFixos = fixos.reduce((s, i) => s + num(i.precoEspecial) * (num(i.proporcao) || 0), 0)
+  const grupos = Array.from(new Set(variaveis.map(i => i.grupo.trim().toLowerCase()).filter(Boolean)))
+  const totalVar = grupos.reduce((s, g) => {
+    const first = variaveis.find(i => i.grupo.trim().toLowerCase() === g)
+    return s + (first ? num(first.precoEspecial) : 0)
+  }, 0)
+  return totalFixos + totalVar
+}
+
 // ─── Lista de combos ──────────────────────────────────────────────────────────
 
 function ListaCombos({ onSelecionar, onNovo }: { onSelecionar: (id: string) => void; onNovo: () => void }) {
@@ -30,7 +59,7 @@ function ListaCombos({ onSelecionar, onNovo }: { onSelecionar: (id: string) => v
       <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
         <div>
           <h1 className="text-base font-semibold text-gray-900">Combos promocionais</h1>
-          <p className="text-xs text-gray-400 mt-0.5">Kits fixos com preço especial para o representante oferecer</p>
+          <p className="text-xs text-gray-400 mt-0.5">Kits com itens fixos e sabores à escolha, com preço especial</p>
         </div>
         <button className="btn-primary flex items-center gap-1.5 text-sm" onClick={onNovo}>
           <Plus size={14} /> Novo combo
@@ -53,8 +82,16 @@ function ListaCombos({ onSelecionar, onNovo }: { onSelecionar: (id: string) => v
         ) : (
           <div className="grid grid-cols-1 gap-3">
             {combos.map((c: any) => {
-              const valorOriginal = c.itens?.reduce((s: number, i: any) => s + Number(i.quantidade) * Number(i.produto?.valorUnitario ?? 0), 0) ?? 0
-              const economia = valorOriginal - Number(c.precoEspecial)
+              const itens: any[] = c.itens ?? []
+              const nFixos = itens.filter(i => i.tipo === 'FIXO').length
+              const grupos = Array.from(new Set(itens.filter(i => i.tipo === 'VARIAVEL').map(i => (i.grupo ?? '').trim()).filter(Boolean)))
+              const base = itens.reduce((s, i) => {
+                if (i.tipo === 'FIXO') return s + Number(i.precoEspecial ?? 0) * Number(i.proporcao ?? 0)
+                return s
+              }, 0) + grupos.reduce((s, g) => {
+                const first = itens.find(i => i.tipo === 'VARIAVEL' && (i.grupo ?? '').trim() === g)
+                return s + (first ? Number(first.precoEspecial ?? 0) : 0)
+              }, 0)
               return (
                 <div key={c.id} className={clsx('card p-4 flex items-center gap-4', !c.ativo && 'opacity-50')}>
                   <div className="w-12 h-12 bg-brand-50 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -71,18 +108,19 @@ function ListaCombos({ onSelecionar, onNovo }: { onSelecionar: (id: string) => v
                       )}
                     </div>
                     <div className="flex items-center gap-4 text-xs text-gray-400">
-                      <span>{c.itens?.length ?? 0} produtos no kit</span>
-                      <span className="font-medium text-gray-900">{fmt(Number(c.precoEspecial))}</span>
-                      {economia > 0 && <span className="text-green-600">Economia de {fmt(economia)}</span>}
+                      <span>{nFixos} fixo{nFixos !== 1 ? 's' : ''}</span>
+                      <span>{grupos.length} grupo{grupos.length !== 1 ? 's' : ''} variáve{grupos.length !== 1 ? 'is' : 'l'}</span>
+                      {base > 0 && <span className="font-medium text-gray-900">a partir de {fmt(base)}</span>}
                       {c.validadeFim && <span className="text-amber-600">Válido até {new Date(c.validadeFim).toLocaleDateString('pt-BR')}</span>}
                     </div>
                     <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                      {c.itens?.slice(0, 4).map((item: any) => (
+                      {itens.slice(0, 4).map((item: any) => (
                         <span key={item.id} className="text-xs bg-gray-50 border border-gray-100 rounded px-1.5 py-0.5 text-gray-600">
-                          {Number(item.quantidade)}× {item.produto?.nome?.split(' ').slice(0, 3).join(' ')}
+                          {item.tipo === 'FIXO' ? `${Number(item.proporcao ?? 0)}× ` : '◆ '}
+                          {item.produto?.nome?.split(' ').slice(0, 3).join(' ')}
                         </span>
                       ))}
-                      {c.itens?.length > 4 && <span className="text-xs text-gray-400">+{c.itens.length - 4} mais</span>}
+                      {itens.length > 4 && <span className="text-xs text-gray-400">+{itens.length - 4} mais</span>}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
@@ -113,10 +151,10 @@ function FormCombo({ comboId, onVoltar }: { comboId?: string; onVoltar: () => vo
   const isEdit = !!comboId
 
   const [form, setForm] = useState({
-    nome: '', descricao: '', precoEspecial: '',
+    nome: '', descricao: '',
     tabelaId: '', validadeInicio: '', validadeFim: '', ativo: true,
   })
-  const [itens, setItens] = useState<{ produtoId: string; nome: string; foto: string; quantidade: number; valorBase: number }[]>([])
+  const [itens, setItens] = useState<ItemForm[]>([])
   const [buscaProd, setBuscaProd] = useState('')
   const [showPicker, setShowPicker] = useState(false)
 
@@ -127,13 +165,16 @@ function FormCombo({ comboId, onVoltar }: { comboId?: string; onVoltar: () => vo
     onSuccess: (data: any) => {
       setForm({
         nome: data.nome, descricao: data.descricao ?? '',
-        precoEspecial: String(data.precoEspecial),
         tabelaId: data.tabelaId ?? '', validadeInicio: '', validadeFim: '', ativo: data.ativo,
       })
       setItens(data.itens.map((i: any) => ({
         produtoId: i.produtoId, nome: i.produto.nome,
-        foto: i.produto.fotoUrl ?? '', quantidade: Number(i.quantidade),
+        foto: i.produto.fotoUrl ?? '',
         valorBase: Number(i.produto.valorUnitario ?? 0),
+        tipo: (i.tipo ?? 'FIXO') as 'FIXO' | 'VARIAVEL',
+        proporcao: i.proporcao != null ? String(i.proporcao) : '1',
+        grupo: i.grupo ?? '',
+        precoEspecial: i.precoEspecial != null ? String(i.precoEspecial) : '0',
       })))
     }
   } as any)
@@ -152,11 +193,17 @@ function FormCombo({ comboId, onVoltar }: { comboId?: string; onVoltar: () => vo
     mutationFn: () => {
       const payload = {
         ...form,
-        precoEspecial: Number(form.precoEspecial.replace(',', '.')),
         tabelaId: form.tabelaId || null,
         validadeInicio: form.validadeInicio || null,
         validadeFim: form.validadeFim || null,
-        itens: itens.map(i => ({ produtoId: i.produtoId, quantidade: i.quantidade })),
+        itens: itens.map(i => ({
+          produtoId: i.produtoId,
+          quantidade: 1,
+          tipo: i.tipo,
+          proporcao: i.tipo === 'FIXO' ? (parseInt(i.proporcao, 10) || 1) : null,
+          grupo: i.tipo === 'VARIAVEL' ? i.grupo.trim() : null,
+          precoEspecial: num(i.precoEspecial),
+        })),
       }
       return isEdit ? api.put(`/combos/${comboId}`, payload) : api.post('/combos', payload)
     },
@@ -170,14 +217,40 @@ function FormCombo({ comboId, onVoltar }: { comboId?: string; onVoltar: () => vo
 
   const adicionarProduto = (p: any) => {
     if (itens.find(i => i.produtoId === p.id)) { toast.error('Produto já adicionado'); return }
-    setItens(prev => [...prev, { produtoId: p.id, nome: p.nome, foto: p.fotoUrl ?? '', quantidade: 1, valorBase: Number(p.valorUnitario ?? 0) }])
+    setItens(prev => [...prev, {
+      produtoId: p.id, nome: p.nome, foto: p.fotoUrl ?? '',
+      valorBase: Number(p.valorUnitario ?? 0),
+      tipo: 'FIXO', proporcao: '1', grupo: '', precoEspecial: '',
+    }])
     setShowPicker(false)
     setBuscaProd('')
   }
 
-  const valorOriginal = itens.reduce((s, i) => s + i.quantidade * i.valorBase, 0)
-  const precoFinal = Number(form.precoEspecial.replace(',', '.')) || 0
-  const economia = valorOriginal - precoFinal
+  const atualizarItem = (idx: number, patch: Partial<ItemForm>) => {
+    setItens(prev => prev.map((i, ii) => ii === idx ? { ...i, ...patch } : i))
+  }
+
+  // Grupos já usados neste combo (pra sugestão)
+  const gruposExistentes = Array.from(new Set(itens.map(i => i.grupo.trim()).filter(Boolean)))
+
+  const validar = (): string | null => {
+    if (!form.nome.trim()) return 'Dê um nome ao combo'
+    if (itens.length === 0) return 'Adicione pelo menos 1 produto'
+    for (const i of itens) {
+      if (i.tipo === 'FIXO' && (parseInt(i.proporcao, 10) || 0) < 1) return `Defina a proporção de "${i.nome}"`
+      if (i.tipo === 'VARIAVEL' && !i.grupo.trim()) return `Defina o grupo de "${i.nome}"`
+      if (num(i.precoEspecial) <= 0) return `Defina o preço de "${i.nome}"`
+    }
+    return null
+  }
+
+  const handleSalvar = () => {
+    const erro = validar()
+    if (erro) { toast.error(erro); return }
+    salvar.mutate()
+  }
+
+  const base = precoBase(itens)
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -194,7 +267,7 @@ function FormCombo({ comboId, onVoltar }: { comboId?: string; onVoltar: () => vo
             <div className="text-sm font-medium text-gray-900">Informações do combo</div>
             <div>
               <label className="label">Nome do combo *</label>
-              <input className="input" placeholder="Ex: Kit Verão, Combo Proteína..."
+              <input className="input" placeholder="Ex: 02 Creatina + Go Fresh"
                 value={form.nome} onChange={e => setForm(p => ({ ...p, nome: e.target.value }))} />
             </div>
             <div>
@@ -225,12 +298,15 @@ function FormCombo({ comboId, onVoltar }: { comboId?: string; onVoltar: () => vo
 
           {/* Produtos do combo */}
           <div className="card p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-sm font-medium text-gray-900">Produtos do kit</div>
+            <div className="flex items-center justify-between mb-1">
+              <div className="text-sm font-medium text-gray-900">Produtos do combo</div>
               <button className="btn-secondary text-xs flex items-center gap-1.5" onClick={() => setShowPicker(!showPicker)}>
                 <Plus size={12} /> Adicionar produto
               </button>
             </div>
+            <p className="text-xs text-gray-400 mb-4">
+              <strong>Fixo</strong>: quantidade calculada pela proporção. <strong>Variável</strong>: sabores que o representante escolhe e mescla (mesmo grupo).
+            </p>
 
             {/* Picker de produto */}
             {showPicker && (
@@ -261,69 +337,103 @@ function FormCombo({ comboId, onVoltar }: { comboId?: string; onVoltar: () => vo
 
             {itens.length === 0 ? (
               <div className="text-center py-6 text-xs text-gray-400">
-                Adicione pelo menos 2 produtos ao combo
+                Adicione os produtos do combo
               </div>
             ) : (
               <div className="space-y-2">
                 {itens.map((item, idx) => (
-                  <div key={item.produtoId} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
-                    {item.foto ? (
-                      <img src={item.foto} alt={item.nome} className="w-9 h-9 object-contain rounded flex-shrink-0" />
-                    ) : (
-                      <div className="w-9 h-9 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
-                        <Package size={12} className="text-gray-300" />
+                  <div key={item.produtoId} className="border border-gray-100 rounded-lg p-3">
+                    <div className="flex items-center gap-3 mb-3">
+                      {item.foto ? (
+                        <img src={item.foto} alt={item.nome} className="w-9 h-9 object-contain rounded flex-shrink-0" />
+                      ) : (
+                        <div className="w-9 h-9 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
+                          <Package size={12} className="text-gray-300" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium text-gray-900 truncate">{item.nome}</div>
+                        <div className="text-xs text-gray-400">Preço base: {fmt(item.valorBase)}</div>
                       </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium text-gray-900 truncate">{item.nome}</div>
-                      <div className="text-xs text-gray-400">Preço base: {fmt(item.valorBase)}</div>
+                      <button className="text-gray-300 hover:text-red-400 transition-colors"
+                        onClick={() => setItens(prev => prev.filter((_, ii) => ii !== idx))}>
+                        <Trash2 size={13} />
+                      </button>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs text-gray-400">Qtd:</span>
-                      <input type="number" min="1" step="1" className="input text-xs w-16 py-1"
-                        value={item.quantidade}
-                        onChange={e => setItens(prev => prev.map((i, ii) => ii === idx ? { ...i, quantidade: Number(e.target.value) } : i))} />
+
+                    <div className="flex items-end gap-2 flex-wrap">
+                      {/* Tipo */}
+                      <div>
+                        <div className="text-xs text-gray-400 mb-1">Tipo</div>
+                        <div className="flex rounded-md overflow-hidden border border-gray-200">
+                          <button
+                            className={clsx('text-xs px-3 py-1.5 transition-colors', item.tipo === 'FIXO' ? 'bg-brand-50 text-brand-700 font-medium' : 'text-gray-500')}
+                            onClick={() => atualizarItem(idx, { tipo: 'FIXO' })}>Fixo</button>
+                          <button
+                            className={clsx('text-xs px-3 py-1.5 transition-colors border-l border-gray-200', item.tipo === 'VARIAVEL' ? 'bg-brand-50 text-brand-700 font-medium' : 'text-gray-500')}
+                            onClick={() => atualizarItem(idx, { tipo: 'VARIAVEL' })}>Variável</button>
+                        </div>
+                      </div>
+
+                      {/* Proporção (FIXO) ou Grupo (VARIAVEL) */}
+                      {item.tipo === 'FIXO' ? (
+                        <div>
+                          <div className="text-xs text-gray-400 mb-1">Proporção</div>
+                          <input type="number" min="1" step="1" className="input text-xs w-20 py-1.5"
+                            value={item.proporcao}
+                            onChange={e => atualizarItem(idx, { proporcao: e.target.value })} />
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="text-xs text-gray-400 mb-1">Grupo (sabores que mesclam)</div>
+                          <input list="grupos-combo" className="input text-xs w-40 py-1.5" placeholder="Ex: Go Fresh"
+                            value={item.grupo}
+                            onChange={e => atualizarItem(idx, { grupo: e.target.value })} />
+                        </div>
+                      )}
+
+                      {/* Preço especial */}
+                      <div>
+                        <div className="text-xs text-gray-400 mb-1">Preço especial</div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-gray-400">R$</span>
+                          <input className="input text-xs w-24 py-1.5" placeholder="0,00"
+                            value={item.precoEspecial}
+                            onChange={e => atualizarItem(idx, { precoEspecial: e.target.value })} />
+                        </div>
+                      </div>
                     </div>
-                    <button className="text-gray-300 hover:text-red-400 transition-colors ml-1"
-                      onClick={() => setItens(prev => prev.filter((_, ii) => ii !== idx))}>
-                      <Trash2 size={13} />
-                    </button>
                   </div>
                 ))}
+
+                {/* Sugestões de grupo (compartilhada por todos os itens variáveis) */}
+                <datalist id="grupos-combo">
+                  {gruposExistentes.map(g => <option key={g} value={g} />)}
+                </datalist>
               </div>
             )}
           </div>
 
-          {/* Preço especial */}
-          <div className="card p-5">
-            <div className="text-sm font-medium text-gray-900 mb-4">Preço do combo</div>
-            {valorOriginal > 0 && (
-              <div className="flex items-center gap-4 mb-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-600">
-                <span>Valor unitário total: <strong>{fmt(valorOriginal)}</strong></span>
-                {economia > 0 && <span className="text-green-600">Economia: <strong>{fmt(economia)}</strong> ({Math.round(economia / valorOriginal * 100)}%)</span>}
-                {economia < 0 && <span className="text-red-500">Atenção: preço especial acima do valor individual</span>}
+          {/* Prévia do preço */}
+          {base > 0 && (
+            <div className="card p-5">
+              <div className="text-sm font-medium text-gray-900 mb-2">Prévia do preço</div>
+              <div className="p-3 bg-gray-50 rounded-lg text-xs text-gray-600">
+                <span>Escolhendo 1 unidade de cada grupo variável: </span>
+                <strong className="text-gray-900">{fmt(base)}</strong>
+                <div className="text-gray-400 mt-1">
+                  No app, o representante escolhe a quantidade dos grupos variáveis (mesclando sabores) e os itens fixos multiplicam pela proporção.
+                </div>
               </div>
-            )}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">R$</span>
-              <input className="input w-40 text-lg font-semibold"
-                placeholder="0,00"
-                value={form.precoEspecial}
-                onChange={e => setForm(p => ({ ...p, precoEspecial: e.target.value }))} />
-              {valorOriginal > 0 && precoFinal > 0 && (
-                <span className="text-xs text-gray-400 ml-1">
-                  = {Math.round((1 - precoFinal / valorOriginal) * 100)}% de desconto sobre valor individual
-                </span>
-              )}
             </div>
-          </div>
+          )}
 
           {/* Botões */}
           <div className="flex items-center gap-3 justify-end">
             <button className="btn-secondary" onClick={onVoltar}>Cancelar</button>
             <button className="btn-primary flex items-center gap-1.5"
-              onClick={() => salvar.mutate()}
-              disabled={!form.nome || !form.precoEspecial || itens.length < 2 || salvar.isPending}>
+              onClick={handleSalvar}
+              disabled={!form.nome || itens.length < 1 || salvar.isPending}>
               {salvar.isPending ? 'Salvando...' : isEdit ? 'Salvar alterações' : 'Criar combo'}
             </button>
           </div>
