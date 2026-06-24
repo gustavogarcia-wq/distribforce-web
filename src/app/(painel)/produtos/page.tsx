@@ -12,7 +12,38 @@ function fmt(v: number) {
   return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
+function EditarCusto({ produtoId, valorAtual }: { produtoId: string; valorAtual: number }) {
+  const qc = useQueryClient()
+  const [v, setV] = useState(String(valorAtual ?? ''))
+  const salvar = useMutation({
+    mutationFn: (custo: number) => api.patch(`/produtos/${produtoId}/custo`, { custo }),
+    onSuccess: () => {
+      toast.success('Custo atualizado!')
+      qc.invalidateQueries({ queryKey: ['produto', produtoId] })
+      qc.invalidateQueries({ queryKey: ['produtos'] })
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error ?? 'Erro ao salvar custo'),
+  })
+  const num = Number(String(v).replace(',', '.'))
+  return (
+    <div className="bg-amber-50 border border-amber-100 rounded-lg p-3">
+      <div className="text-xs text-gray-500 mb-1">Custo (Preço base) — editável</div>
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-gray-500">R$</span>
+        <input className="input text-sm flex-1 py-1.5" placeholder="0,00" value={v}
+          onChange={e => setV(e.target.value)} />
+        <button className="btn-primary text-xs px-3 py-1.5"
+          disabled={salvar.isPending || isNaN(num) || num < 0}
+          onClick={() => salvar.mutate(num)}>
+          {salvar.isPending ? 'Salvando...' : 'Salvar'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function ProdutosPage() {
+
   const [busca, setBusca] = useState('')
   const [categoria, setCategoria] = useState('')
   const [page, setPage] = useState(1)
@@ -213,6 +244,9 @@ export default function ProdutosPage() {
               <Power size={15} /> {detalhe.ativo ? 'Desativar produto' : 'Ativar produto'}
             </button>
 
+            {/* Custo editavel */}
+            <EditarCusto key={detalhe.id} produtoId={detalhe.id} valorAtual={Number(detalhe.valorUnitario ?? 0)} />
+
             {/* Dados principais */}
             <div className="grid grid-cols-2 gap-3">
               {[
@@ -221,7 +255,6 @@ export default function ProdutosPage() {
                 ['EAN / Código de barras', detalhe.ean,   true],
                 ['NCM',            detalhe.ncm,           true],
                 ['Unidade',        detalhe.unidade,       false],
-                ['Preço base',     fmt(detalhe.valorUnitario ?? 0), false],
               ].map(([label, value, mono]: any) => value ? (
                 <div key={label}>
                   <div className="text-xs text-gray-400">{label}</div>
