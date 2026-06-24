@@ -27,16 +27,12 @@ type ItemForm = {
   precoEspecial: string
 }
 
-// Preco "a partir de": 1 unidade de cada grupo variavel + fixos pela proporcao
+// Preco "a partir de": fixos pela proporcao + 1 unidade da escolha variavel
 function precoBase(itens: ItemForm[]) {
   const fixos = itens.filter(i => i.tipo === 'FIXO')
   const variaveis = itens.filter(i => i.tipo === 'VARIAVEL')
   const totalFixos = fixos.reduce((s, i) => s + num(i.precoEspecial) * (num(i.proporcao) || 0), 0)
-  const grupos = Array.from(new Set(variaveis.map(i => i.grupo.trim().toLowerCase()).filter(Boolean)))
-  const totalVar = grupos.reduce((s, g) => {
-    const first = variaveis.find(i => i.grupo.trim().toLowerCase() === g)
-    return s + (first ? num(first.precoEspecial) : 0)
-  }, 0)
+  const totalVar = variaveis.length > 0 ? num(variaveis[0].precoEspecial) : 0
   return totalFixos + totalVar
 }
 
@@ -84,14 +80,11 @@ function ListaCombos({ onSelecionar, onNovo }: { onSelecionar: (id: string) => v
             {combos.map((c: any) => {
               const itens: any[] = c.itens ?? []
               const nFixos = itens.filter(i => i.tipo === 'FIXO').length
-              const grupos = Array.from(new Set(itens.filter(i => i.tipo === 'VARIAVEL').map(i => (i.grupo ?? '').trim()).filter(Boolean)))
+              const variaveis = itens.filter(i => i.tipo === 'VARIAVEL')
               const base = itens.reduce((s, i) => {
                 if (i.tipo === 'FIXO') return s + Number(i.precoEspecial ?? 0) * Number(i.proporcao ?? 0)
                 return s
-              }, 0) + grupos.reduce((s, g) => {
-                const first = itens.find(i => i.tipo === 'VARIAVEL' && (i.grupo ?? '').trim() === g)
-                return s + (first ? Number(first.precoEspecial ?? 0) : 0)
-              }, 0)
+              }, 0) + (variaveis.length ? Number(variaveis[0].precoEspecial ?? 0) : 0)
               return (
                 <div key={c.id} className={clsx('card p-4 flex items-center gap-4', !c.ativo && 'opacity-50')}>
                   <div className="w-12 h-12 bg-brand-50 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -109,7 +102,7 @@ function ListaCombos({ onSelecionar, onNovo }: { onSelecionar: (id: string) => v
                     </div>
                     <div className="flex items-center gap-4 text-xs text-gray-400">
                       <span>{nFixos} fixo{nFixos !== 1 ? 's' : ''}</span>
-                      <span>{grupos.length} grupo{grupos.length !== 1 ? 's' : ''} variáve{grupos.length !== 1 ? 'is' : 'l'}</span>
+                      <span>{variaveis.length} variáve{variaveis.length !== 1 ? 'is' : 'l'}</span>
                       {base > 0 && <span className="font-medium text-gray-900">a partir de {fmt(base)}</span>}
                       {c.validadeFim && <span className="text-amber-600">Válido até {new Date(c.validadeFim).toLocaleDateString('pt-BR')}</span>}
                     </div>
@@ -201,7 +194,7 @@ function FormCombo({ comboId, onVoltar }: { comboId?: string; onVoltar: () => vo
           quantidade: 1,
           tipo: i.tipo,
           proporcao: i.tipo === 'FIXO' ? (parseInt(i.proporcao, 10) || 1) : null,
-          grupo: i.tipo === 'VARIAVEL' ? i.grupo.trim() : null,
+          grupo: null,
           precoEspecial: num(i.precoEspecial),
         })),
       }
@@ -230,15 +223,11 @@ function FormCombo({ comboId, onVoltar }: { comboId?: string; onVoltar: () => vo
     setItens(prev => prev.map((i, ii) => ii === idx ? { ...i, ...patch } : i))
   }
 
-  // Grupos já usados neste combo (pra sugestão)
-  const gruposExistentes = Array.from(new Set(itens.map(i => i.grupo.trim()).filter(Boolean)))
-
   const validar = (): string | null => {
     if (!form.nome.trim()) return 'Dê um nome ao combo'
     if (itens.length === 0) return 'Adicione pelo menos 1 produto'
     for (const i of itens) {
       if (i.tipo === 'FIXO' && (parseInt(i.proporcao, 10) || 0) < 1) return `Defina a proporção de "${i.nome}"`
-      if (i.tipo === 'VARIAVEL' && !i.grupo.trim()) return `Defina o grupo de "${i.nome}"`
       if (num(i.precoEspecial) <= 0) return `Defina o preço de "${i.nome}"`
     }
     return null
@@ -305,7 +294,7 @@ function FormCombo({ comboId, onVoltar }: { comboId?: string; onVoltar: () => vo
               </button>
             </div>
             <p className="text-xs text-gray-400 mb-4">
-              <strong>Fixo</strong>: quantidade calculada pela proporção. <strong>Variável</strong>: sabores que o representante escolhe e mescla (mesmo grupo).
+              <strong>Fixo</strong>: quantidade calculada pela proporção. <strong>Variável</strong>: sabores que o representante escolhe e mescla.
             </p>
 
             {/* Picker de produto */}
@@ -375,20 +364,13 @@ function FormCombo({ comboId, onVoltar }: { comboId?: string; onVoltar: () => vo
                         </div>
                       </div>
 
-                      {/* Proporção (FIXO) ou Grupo (VARIAVEL) */}
-                      {item.tipo === 'FIXO' ? (
+                      {/* Proporção (apenas FIXO) */}
+                      {item.tipo === 'FIXO' && (
                         <div>
                           <div className="text-xs text-gray-400 mb-1">Proporção</div>
                           <input type="number" min="1" step="1" className="input text-xs w-20 py-1.5"
                             value={item.proporcao}
                             onChange={e => atualizarItem(idx, { proporcao: e.target.value })} />
-                        </div>
-                      ) : (
-                        <div>
-                          <div className="text-xs text-gray-400 mb-1">Grupo (sabores que mesclam)</div>
-                          <input list="grupos-combo" className="input text-xs w-40 py-1.5" placeholder="Ex: Go Fresh"
-                            value={item.grupo}
-                            onChange={e => atualizarItem(idx, { grupo: e.target.value })} />
                         </div>
                       )}
 
@@ -406,10 +388,6 @@ function FormCombo({ comboId, onVoltar }: { comboId?: string; onVoltar: () => vo
                   </div>
                 ))}
 
-                {/* Sugestões de grupo (compartilhada por todos os itens variáveis) */}
-                <datalist id="grupos-combo">
-                  {gruposExistentes.map(g => <option key={g} value={g} />)}
-                </datalist>
               </div>
             )}
           </div>
@@ -419,10 +397,10 @@ function FormCombo({ comboId, onVoltar }: { comboId?: string; onVoltar: () => vo
             <div className="card p-5">
               <div className="text-sm font-medium text-gray-900 mb-2">Prévia do preço</div>
               <div className="p-3 bg-gray-50 rounded-lg text-xs text-gray-600">
-                <span>Escolhendo 1 unidade de cada grupo variável: </span>
+                <span>Escolhendo 1 unidade da opção variável: </span>
                 <strong className="text-gray-900">{fmt(base)}</strong>
                 <div className="text-gray-400 mt-1">
-                  No app, o representante escolhe a quantidade dos grupos variáveis (mesclando sabores) e os itens fixos multiplicam pela proporção.
+                  No app, o representante escolhe a quantidade dos itens variáveis (mesclando sabores) e os itens fixos multiplicam pela proporção.
                 </div>
               </div>
             </div>
