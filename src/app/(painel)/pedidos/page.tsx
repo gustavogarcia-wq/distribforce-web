@@ -29,7 +29,50 @@ function fmt(v: number) {
   return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
+function calcMargem(p: any) {
+  const itens = p.itens ?? []
+  if (itens.length === 0) return { status: 'indef' as const, falta: [] as string[] }
+  const falta: string[] = []
+  let custo = 0
+  for (const it of itens) {
+    const prod = it.produto
+    if (!prod || !prod.custoManual) {
+      falta.push(prod?.nome ?? 'Produto')
+      continue
+    }
+    custo += Number(it.quantidade) * Number(prod.valorUnitario ?? 0)
+  }
+  if (falta.length > 0) return { status: 'falta' as const, falta }
+  const receita = Number(p.total ?? 0)
+  const lucro = receita - custo
+  const margemPct = receita > 0 ? (lucro / receita) * 100 : 0
+  return { status: 'ok' as const, lucro, margemPct, falta: [] as string[] }
+}
+
+function MargemCell({ p }: { p: any }) {
+  const m = calcMargem(p)
+  if (m.status === 'ok') {
+    const cor = m.margemPct < 0 ? 'text-red-600' : 'text-green-700'
+    return (
+      <td className="px-4 py-3">
+        <div className={`font-medium ${cor}`}>{fmt(m.lucro)}</div>
+        <div className="text-xs text-gray-400">{m.margemPct.toFixed(0)}%</div>
+      </td>
+    )
+  }
+  if (m.status === 'falta') {
+    const lista = Array.from(new Set(m.falta)).join(', ')
+    return (
+      <td className="px-4 py-3">
+        <span title={`Produtos sem custo cadastrado: ${lista}`} className="text-gray-300 cursor-help underline decoration-dotted">—</span>
+      </td>
+    )
+  }
+  return <td className="px-4 py-3 text-gray-300">—</td>
+}
+
 export default function PedidosPage() {
+
   const qc = useQueryClient()
   const [page, setPage] = useState(1)
   const [busca, setBusca] = useState('')
@@ -211,6 +254,7 @@ export default function PedidosPage() {
                   <th className="text-left px-4 py-2.5 font-medium text-gray-500">Cliente</th>
                   <th className="text-left px-4 py-2.5 font-medium text-gray-500">Vendedor</th>
                   <th className="text-left px-4 py-2.5 font-medium text-gray-500">Valor</th>
+                  {usuario?.perfil === "ADMIN" && <th className="text-left px-4 py-2.5 font-medium text-gray-500">Margem</th>}
                   <th className="text-left px-4 py-2.5 font-medium text-gray-500">Status</th>
                   <th className="text-left px-4 py-2.5 font-medium text-gray-500">Ação</th>
                 </tr>
@@ -223,6 +267,7 @@ export default function PedidosPage() {
                     <td className="px-4 py-3 font-medium text-gray-900 max-w-[140px] truncate">{p.cliente?.razaoSocial}</td>
                     <td className="px-4 py-3 text-gray-600 max-w-[120px] truncate">{p.vendedor?.usuario?.nome}</td>
                     <td className="px-4 py-3 font-medium text-gray-900">{fmt(p.total)}</td>
+                    {usuario?.perfil === "ADMIN" && <MargemCell p={p} />}
                     <td className="px-4 py-3"><span className={STATUS_CLASS[p.status]}>{STATUS_LABELS[p.status]}</span></td>
                     <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center gap-1">
