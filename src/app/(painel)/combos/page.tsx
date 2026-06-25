@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { toast } from 'sonner'
-import { Plus, Package, Trash2, Gift, ChevronRight, ArrowLeft } from 'lucide-react'
+import { Plus, Package, Trash2, Gift, ChevronRight, ArrowLeft, Copy } from 'lucide-react'
 import clsx from 'clsx'
 
 function fmt(v: number) {
@@ -38,7 +38,7 @@ function precoBase(itens: ItemForm[]) {
 
 // ─── Lista de combos ──────────────────────────────────────────────────────────
 
-function ListaCombos({ onSelecionar, onNovo }: { onSelecionar: (id: string) => void; onNovo: () => void }) {
+function ListaCombos({ onSelecionar, onNovo, onDuplicar }: { onSelecionar: (id: string) => void; onNovo: () => void; onDuplicar: (id: string) => void }) {
   const { data: combos, isLoading } = useQuery({
     queryKey: ['combos'],
     queryFn: () => api.get('/combos').then(r => r.data),
@@ -117,6 +117,9 @@ function ListaCombos({ onSelecionar, onNovo }: { onSelecionar: (id: string) => v
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
+                    <button className="text-gray-300 hover:text-brand-500 transition-colors" title="Duplicar combo" onClick={() => onDuplicar(c.id)}>
+                      <Copy size={14} />
+                    </button>
                     <button className="text-gray-300 hover:text-gray-500 transition-colors" onClick={() => onSelecionar(c.id)}>
                       <ChevronRight size={16} />
                     </button>
@@ -139,9 +142,10 @@ function ListaCombos({ onSelecionar, onNovo }: { onSelecionar: (id: string) => v
 
 // ─── Formulário de novo/editar combo ─────────────────────────────────────────
 
-function FormCombo({ comboId, onVoltar }: { comboId?: string; onVoltar: () => void }) {
+function FormCombo({ comboId, duplicarDe, onVoltar }: { comboId?: string; duplicarDe?: string; onVoltar: () => void }) {
   const qc = useQueryClient()
   const isEdit = !!comboId
+  const fonteId = comboId ?? duplicarDe
 
   const [form, setForm] = useState({
     nome: '', descricao: '',
@@ -152,15 +156,15 @@ function FormCombo({ comboId, onVoltar }: { comboId?: string; onVoltar: () => vo
   const [showPicker, setShowPicker] = useState(false)
 
   const { data: combo } = useQuery({
-    queryKey: ['combo', comboId],
-    queryFn: () => api.get(`/combos/${comboId}`).then(r => r.data),
-    enabled: isEdit,
+    queryKey: ['combo', fonteId],
+    queryFn: () => api.get(`/combos/${fonteId}`).then(r => r.data),
+    enabled: !!fonteId,
   })
 
   useEffect(() => {
     if (!combo) return
     setForm({
-      nome: combo.nome, descricao: combo.descricao ?? '',
+      nome: duplicarDe ? `${combo.nome} (cópia)` : combo.nome, descricao: combo.descricao ?? '',
       tabelaId: combo.tabelaId ?? '', validadeInicio: '', validadeFim: '', ativo: combo.ativo,
     })
     setItens((combo.itens ?? []).map((i: any) => ({
@@ -426,16 +430,18 @@ function FormCombo({ comboId, onVoltar }: { comboId?: string; onVoltar: () => vo
 // ─── Componente raiz ──────────────────────────────────────────────────────────
 
 export default function CombosPage() {
-  const [view, setView] = useState<'lista' | 'novo' | 'editar'>('lista')
+  const [view, setView] = useState<'lista' | 'novo' | 'editar' | 'duplicar'>('lista')
   const [comboId, setComboId] = useState<string | undefined>()
 
   if (view === 'novo') return <FormCombo onVoltar={() => setView('lista')} />
   if (view === 'editar' && comboId) return <FormCombo comboId={comboId} onVoltar={() => setView('lista')} />
+  if (view === 'duplicar' && comboId) return <FormCombo duplicarDe={comboId} onVoltar={() => setView('lista')} />
 
   return (
     <ListaCombos
       onSelecionar={id => { setComboId(id); setView('editar') }}
       onNovo={() => setView('novo')}
+      onDuplicar={id => { setComboId(id); setView('duplicar') }}
     />
   )
 }
