@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { toast } from 'sonner'
-import { Plus, ChevronRight, Save, ArrowLeft, Percent, DollarSign, Search, Package, Copy, Trash2 } from 'lucide-react'
+import { Plus, ChevronRight, Save, ArrowLeft, Percent, DollarSign, Search, Package, Copy, Trash2, Pencil } from 'lucide-react'
 import clsx from 'clsx'
 
 function fmt(v: number) {
@@ -16,26 +16,53 @@ function fmt(v: number) {
 function ListaTabelas({ onSelecionar }: { onSelecionar: (id: string) => void }) {
   const qc = useQueryClient()
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ nome: '', descontoMaximo: 0, validade: '', ativa: true })
+  const [editId, setEditId] = useState<string | null>(null)
+  const [form, setForm] = useState({ nome: '', descontoMaximo: 0, validade: '', ativa: true, faixaGrupo: '', faixaNivel: '', faixaMin: '', faixaMax: '' })
 
   const { data: tabelas, isLoading } = useQuery({
     queryKey: ['tabelas'],
     queryFn: () => api.get('/tabelas').then(r => r.data),
   })
 
+  function resetForm() {
+    setEditId(null)
+    setForm({ nome: '', descontoMaximo: 0, validade: '', ativa: true, faixaGrupo: '', faixaNivel: '', faixaMin: '', faixaMax: '' })
+  }
+  function abrirEdicao(t: any) {
+    setEditId(t.id)
+    setForm({
+      nome: t.nome ?? '',
+      descontoMaximo: Number(t.descontoMaximo ?? 0),
+      validade: t.validade ? String(t.validade).slice(0, 10) : '',
+      ativa: !!t.ativa,
+      faixaGrupo: t.faixaGrupo ?? '',
+      faixaNivel: t.faixaNivel != null ? String(t.faixaNivel) : '',
+      faixaMin: t.faixaMin != null ? String(t.faixaMin) : '',
+      faixaMax: t.faixaMax != null ? String(t.faixaMax) : '',
+    })
+    setShowForm(true)
+  }
   const criar = useMutation({
-    mutationFn: () => api.post('/tabelas', {
-      ...form,
-      descontoMaximo: Number(form.descontoMaximo),
-      validade: form.validade || undefined,
-    }),
+    mutationFn: () => {
+      const body = {
+        nome: form.nome,
+        descontoMaximo: Number(form.descontoMaximo),
+        validade: form.validade || undefined,
+        ativa: form.ativa,
+        faixaGrupo: form.faixaGrupo.trim() ? form.faixaGrupo.trim() : null,
+        faixaNivel: form.faixaNivel !== '' ? Number(form.faixaNivel) : null,
+        faixaMin: form.faixaMin !== '' ? Number(form.faixaMin) : null,
+        faixaMax: form.faixaMax !== '' ? Number(form.faixaMax) : null,
+      }
+      return editId ? api.patch(`/tabelas/${editId}`, body) : api.post('/tabelas', body)
+    },
     onSuccess: () => {
-      toast.success('Tabela criada!')
+      toast.success(editId ? 'Tabela atualizada!' : 'Tabela criada!')
       qc.invalidateQueries({ queryKey: ['tabelas'] })
       setShowForm(false)
-      setForm({ nome: '', descontoMaximo: 0, validade: '', ativa: true })
+      resetForm()
     },
-    onError: (e: any) => toast.error(e.response?.data?.error ?? 'Erro ao criar tabela'),
+    onError: (e: any) => toast.error(e.response?.data?.error ?? 'Erro ao salvar tabela'),
   })
   const duplicar = useMutation({
     mutationFn: (id: string) => api.post(`/tabelas/${id}/duplicar`),
@@ -62,7 +89,7 @@ function ListaTabelas({ onSelecionar }: { onSelecionar: (id: string) => void }) 
           <h1 className="text-base font-semibold text-gray-900">Tabelas de preço</h1>
           <p className="text-xs text-gray-400 mt-0.5">Gerencie os preços por tabela e vincule aos representantes</p>
         </div>
-        <button className="btn-primary flex items-center gap-1.5 text-sm" onClick={() => setShowForm(!showForm)}>
+        <button className="btn-primary flex items-center gap-1.5 text-sm" onClick={() => { resetForm(); setShowForm(!showForm) }}>
           <Plus size={14} /> Nova tabela
         </button>
       </div>
@@ -72,7 +99,7 @@ function ListaTabelas({ onSelecionar }: { onSelecionar: (id: string) => void }) 
         {/* Formulário de nova tabela */}
         {showForm && (
           <div className="card p-5 mb-5">
-            <div className="text-sm font-medium text-gray-900 mb-4">Nova tabela de preço</div>
+            <div className="text-sm font-medium text-gray-900 mb-4">{editId ? 'Editar tabela' : 'Nova tabela de preço'}</div>
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div className="col-span-2 md:col-span-1">
                 <label className="label">Nome da tabela *</label>
@@ -97,12 +124,38 @@ function ListaTabelas({ onSelecionar }: { onSelecionar: (id: string) => void }) 
                 <label htmlFor="ativa" className="text-sm text-gray-600 cursor-pointer">Tabela ativa</label>
               </div>
             </div>
+            <div className="border-t border-gray-100 pt-4 mb-4">
+              <div className="text-xs font-medium text-gray-500 mb-3">Faixa de preço por volume (opcional)</div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="label">Grupo de faixa</label>
+                  <input className="input" placeholder="Ex: ESPECIALIZADO"
+                    value={form.faixaGrupo} onChange={e => setForm(p => ({ ...p, faixaGrupo: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="label">Nível (1 a 4)</label>
+                  <input type="number" min="1" max="4" step="1" className="input"
+                    value={form.faixaNivel} onChange={e => setForm(p => ({ ...p, faixaNivel: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="label">Valor mínimo (R$)</label>
+                  <input type="number" min="0" step="0.01" className="input"
+                    value={form.faixaMin} onChange={e => setForm(p => ({ ...p, faixaMin: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="label">Valor máximo (R$)</label>
+                  <input type="number" min="0" step="0.01" className="input" placeholder="vazio = em diante"
+                    value={form.faixaMax} onChange={e => setForm(p => ({ ...p, faixaMax: e.target.value }))} />
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mt-2">Preencha apenas nas tabelas do canal especializado; deixe em branco nas demais.</p>
+            </div>
             <div className="flex items-center gap-2 justify-end">
-              <button className="btn-secondary text-sm" onClick={() => setShowForm(false)}>Cancelar</button>
+              <button className="btn-secondary text-sm" onClick={() => { setShowForm(false); resetForm() }}>Cancelar</button>
               <button className="btn-primary text-sm flex items-center gap-1.5"
                 onClick={() => criar.mutate()}
                 disabled={!form.nome || criar.isPending}>
-                {criar.isPending ? 'Criando...' : 'Criar tabela'}
+                {criar.isPending ? 'Salvando...' : (editId ? 'Salvar alterações' : 'Criar tabela')}
               </button>
             </div>
           </div>
@@ -141,6 +194,12 @@ function ListaTabelas({ onSelecionar }: { onSelecionar: (id: string) => void }) 
                     <span>{t._count?.clientesTabelas ?? 0} clientes vinculados</span>
                   </div>
                 </div>
+                <button
+                  className="p-2 text-gray-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors flex-shrink-0"
+                  title="Editar dados/faixa da tabela"
+                  onClick={(e) => { e.stopPropagation(); abrirEdicao(t) }}>
+                  <Pencil size={16} />
+                </button>
                 <button
                   className="p-2 text-gray-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors flex-shrink-0"
                   title="Duplicar tabela"
