@@ -1,15 +1,16 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import { api } from '@/lib/api'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import {
-  TrendingUp, ShoppingCart, Receipt, Clock, ArrowUpRight, ArrowDownRight,
+  TrendingUp, ShoppingCart, Receipt, Clock, ArrowUpRight, ArrowDownRight, Filter,
 } from 'lucide-react'
 
-// ─── helpers ───────────────────────────────────────────────────────────────
+// âââ helpers âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function fmtMoeda(v: number) {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
 }
@@ -20,7 +21,7 @@ function fmtNum(v: number) {
 // cores do funil por status
 const STATUS_COR: Record<string, string> = {
   ORCAMENTO: '#94a3b8',            // cinza
-  AGUARDANDO_APROVACAO: '#f59e0b', // âmbar
+  AGUARDANDO_APROVACAO: '#f59e0b', // Ã¢mbar
   CONFIRMADO: '#378add',           // brand
   FATURADO: '#22c55e',             // verde
 }
@@ -31,7 +32,7 @@ const STATUS_BG: Record<string, string> = {
   FATURADO: '#dcfce7',
 }
 
-// chip de variação vs mês anterior (esconde quando não faz sentido)
+// chip de variaÃ§Ã£o vs mÃªs anterior (esconde quando nÃ£o faz sentido)
 function Delta({ valor, base }: { valor: number | null; base: number }) {
   if (valor === null || base === 0) return null
   const sobe = valor >= 0
@@ -43,18 +44,35 @@ function Delta({ valor, base }: { valor: number | null; base: number }) {
   )
 }
 
-// ─── página ──────────────────────────────────────────────────────────────────
+// âââ pÃ¡gina ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
+const MESES = ['Janeiro','Fevereiro','MarÃ§o','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+
 export default function DashboardPage() {
+  const hoje = new Date()
+  const [mes, setMes] = useState(hoje.getMonth() + 1)
+  const [ano, setAno] = useState(hoje.getFullYear())
+  const [vendedorId, setVendedorId] = useState('')
+  const [estado, setEstado] = useState('')
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['dashboard'],
-    queryFn: () => api.get('/dashboard').then(r => r.data),
+    queryKey: ['dashboard', mes, ano, vendedorId, estado],
+    queryFn: () => api.get('/dashboard', { params: {
+      mes, ano,
+      vendedorId: vendedorId || undefined,
+      estado: estado || undefined,
+    } }).then(r => r.data),
+    placeholderData: (prev: any) => prev,
+  })
+  const { data: vendedores } = useQuery({
+    queryKey: ['vendedores-dashboard'],
+    queryFn: () => api.get('/relatorios/vendedores').then(r => r.data),
   })
 
   if (isLoading) {
-    return <div className="flex-1 flex items-center justify-center text-sm text-gray-400">Carregando métricas…</div>
+    return <div className="flex-1 flex items-center justify-center text-sm text-gray-400">Carregando mÃ©tricasâ¦</div>
   }
   if (isError || !data) {
-    return <div className="flex-1 flex items-center justify-center text-sm text-red-500">Não foi possível carregar o dashboard.</div>
+    return <div className="flex-1 flex items-center justify-center text-sm text-red-500">NÃ£o foi possÃ­vel carregar o dashboard.</div>
   }
 
   const k = data.kpis
@@ -69,7 +87,7 @@ export default function DashboardPage() {
       <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
         <div>
           <h1 className="text-base font-semibold text-gray-900">
-            {individual ? 'Meu desempenho' : 'Visão geral'}
+            {individual ? 'Meu desempenho' : 'VisÃ£o geral'}
           </h1>
           <p className="text-xs text-gray-400 mt-0.5">
             {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
@@ -77,12 +95,38 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Barra de filtros */}
+      <div className="bg-white border-b border-gray-200 px-6 py-3 flex flex-wrap items-center gap-2">
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 mr-1"><Filter size={13} /> Filtros</span>
+        <select value={mes} onChange={e => setMes(Number(e.target.value))} className="text-sm border border-gray-200 rounded-lg px-2 py-1.5">
+          {MESES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+        </select>
+        <select value={ano} onChange={e => setAno(Number(e.target.value))} className="text-sm border border-gray-200 rounded-lg px-2 py-1.5">
+          {[0, 1, 2].map(d => { const a = hoje.getFullYear() - d; return <option key={a} value={a}>{a}</option> })}
+        </select>
+        {!individual && (
+          <select value={vendedorId} onChange={e => setVendedorId(e.target.value)} className="text-sm border border-gray-200 rounded-lg px-2 py-1.5">
+            <option value="">Todos os vendedores</option>
+            {(vendedores ?? []).map((v: any) => <option key={v.id} value={v.id}>{v.usuario?.nome ?? '—'}</option>)}
+          </select>
+        )}
+        {!individual && (
+          <select value={estado} onChange={e => setEstado(e.target.value)} className="text-sm border border-gray-200 rounded-lg px-2 py-1.5">
+            <option value="">Todos os estados</option>
+            {UFS.map(uf => <option key={uf} value={uf}>{uf}</option>)}
+          </select>
+        )}
+        {(vendedorId || estado || mes !== hoje.getMonth() + 1 || ano !== hoje.getFullYear()) && (
+          <button onClick={() => { setMes(hoje.getMonth() + 1); setAno(hoje.getFullYear()); setVendedorId(''); setEstado('') }} className="text-xs text-gray-500 hover:text-gray-700 underline ml-1">Limpar</button>
+        )}
+      </div>
+
       <div className="p-6 space-y-6">
         {/* KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="card p-4">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs text-gray-500">{individual ? 'Meus pedidos no mês' : 'Pedidos no mês'}</span>
+              <span className="text-xs text-gray-500">{individual ? 'Meus pedidos no mÃªs' : 'Pedidos no mÃªs'}</span>
               <div className="w-7 h-7 bg-brand-50 rounded-lg flex items-center justify-center">
                 <ShoppingCart size={14} className="text-brand-600" />
               </div>
@@ -95,7 +139,7 @@ export default function DashboardPage() {
 
           <div className="card p-4">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs text-gray-500">{individual ? 'Meu faturamento' : 'Faturamento no mês'}</span>
+              <span className="text-xs text-gray-500">{individual ? 'Meu faturamento' : 'Faturamento no mÃªs'}</span>
               <div className="w-7 h-7 bg-green-50 rounded-lg flex items-center justify-center">
                 <TrendingUp size={14} className="text-green-600" />
               </div>
@@ -108,7 +152,7 @@ export default function DashboardPage() {
 
           <div className="card p-4">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs text-gray-500">Ticket médio</span>
+              <span className="text-xs text-gray-500">Ticket mÃ©dio</span>
               <div className="w-7 h-7 bg-purple-50 rounded-lg flex items-center justify-center">
                 <Receipt size={14} className="text-purple-600" />
               </div>
@@ -121,7 +165,7 @@ export default function DashboardPage() {
 
           <div className="card p-4 border-amber-200 bg-amber-50">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs text-amber-600">Aguardando aprovação</span>
+              <span className="text-xs text-amber-600">Aguardando aprovaÃ§Ã£o</span>
               <div className="w-7 h-7 bg-amber-100 rounded-lg flex items-center justify-center">
                 <Clock size={14} className="text-amber-600" />
               </div>
@@ -131,7 +175,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Funil + tendência */}
+        {/* Funil + tendÃªncia */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Funil por status */}
           <div className="card p-5">
@@ -146,7 +190,7 @@ export default function DashboardPage() {
                   <div key={s.status}>
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-xs font-medium text-gray-700">{s.label}</span>
-                      <span className="text-xs text-gray-500">{fmtNum(s.qtd)} · {pct}%</span>
+                      <span className="text-xs text-gray-500">{fmtNum(s.qtd)} Â· {pct}%</span>
                     </div>
                     <div className="h-2 rounded-full overflow-hidden" style={{ background: STATUS_BG[s.status] }}>
                       <div className="h-full rounded-full" style={{ width: `${pct}%`, background: STATUS_COR[s.status] }} />
@@ -162,7 +206,7 @@ export default function DashboardPage() {
             <h2 className="text-sm font-medium text-gray-900 mb-4">Pedidos por dia</h2>
             {semMovimento ? (
               <div className="h-48 flex items-center justify-center text-sm text-gray-400">
-                Nenhum pedido neste mês ainda
+                Nenhum pedido neste mÃªs ainda
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={200}>
@@ -189,7 +233,7 @@ export default function DashboardPage() {
 
         {/* Rankings */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Top vendedores — só na visão da empresa (admin) */}
+          {/* Top vendedores â sÃ³ na visÃ£o da empresa (admin) */}
           {data.topVendedores && (
             <div className="card p-5">
               <h2 className="text-sm font-medium text-gray-900 mb-4">Top vendedores</h2>
@@ -215,7 +259,7 @@ export default function DashboardPage() {
                   })}
                 </div>
               ) : (
-                <div className="text-sm text-gray-400 text-center py-8">Sem vendas neste mês</div>
+                <div className="text-sm text-gray-400 text-center py-8">Sem vendas neste mÃªs</div>
               )}
             </div>
           )}
@@ -241,7 +285,7 @@ export default function DashboardPage() {
                 })}
               </div>
             ) : (
-              <div className="text-sm text-gray-400 text-center py-8">Sem vendas neste mês</div>
+              <div className="text-sm text-gray-400 text-center py-8">Sem vendas neste mÃªs</div>
             )}
           </div>
 
@@ -267,7 +311,7 @@ export default function DashboardPage() {
                 })}
               </div>
             ) : (
-              <div className="text-sm text-gray-400 text-center py-8">Sem vendas neste mês</div>
+              <div className="text-sm text-gray-400 text-center py-8">Sem vendas neste mÃªs</div>
             )}
           </div>
         </div>
