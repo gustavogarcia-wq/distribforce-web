@@ -6,7 +6,7 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import {
   LayoutDashboard, ShoppingCart, Users, Building2,
-  Target, BarChart2, Settings, LogOut, Package, Tag, Gift
+  Target, BarChart2, Settings, LogOut, Package, Tag, Gift, UserX
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -15,12 +15,13 @@ const navItems = [
   { href: '/pedidos',        label: 'Pedidos',          icon: ShoppingCart },
   { href: '/vendedores',     label: 'Vendedores',       icon: Users },
   { href: '/clientes',       label: 'Clientes',         icon: Building2 },
+  { href: '/clientes-inativos', label: 'Clientes inativos', icon: UserX },
   { href: '/produtos',       label: 'Produtos',         icon: Package },
-  { href: '/tabelas',        label: 'Tabelas de preço', icon: Tag },
+  { href: '/tabelas',        label: 'Tabelas de preÃ§o', icon: Tag },
   { href: '/combos',         label: 'Combos',           icon: Gift },
   { href: '/metas',          label: 'Metas',            icon: Target },
-  { href: '/relatorios',     label: 'Relatórios',       icon: BarChart2 },
-  { href: '/configuracoes',  label: 'Configurações',    icon: Settings },
+  { href: '/relatorios',     label: 'RelatÃ³rios',       icon: BarChart2 },
+  { href: '/configuracoes',  label: 'ConfiguraÃ§Ãµes',    icon: Settings },
 ]
 
 export default function PainelLayout({ children }: { children: React.ReactNode }) {
