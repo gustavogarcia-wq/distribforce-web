@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { UserX, MapPin, Phone, Clock, ArrowLeft, ShoppingBag, X } from 'lucide-react'
+import { UserX, MapPin, Phone, Clock, ArrowLeft, ShoppingBag, X, Sparkles } from 'lucide-react'
 import clsx from 'clsx'
 
 function fmtMoeda(v: number) {
@@ -122,6 +122,21 @@ function PainelVendas({ cliente, onFechar }: { cliente: { id: string; nome: stri
   })
   const vendas = data?.vendas ?? []
 
+  const [iaLoading, setIaLoading] = useState(false)
+  const [ia, setIa] = useState<any>(null)
+  const [iaErro, setIaErro] = useState('')
+  async function gerarIA() {
+    setIaLoading(true); setIaErro(''); setIa(null)
+    try {
+      const r = await api.get(`/clientes/${cliente.id}/sugestao-ia`).then(r => r.data)
+      setIa(r)
+    } catch (e: any) {
+      setIaErro('Não foi possível gerar a sugestão agora. Tente novamente.')
+    } finally {
+      setIaLoading(false)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-40 flex justify-end" onClick={onFechar}>
       <div className="absolute inset-0 bg-black/20" />
@@ -133,6 +148,46 @@ function PainelVendas({ cliente, onFechar }: { cliente: { id: string; nome: stri
           </div>
           <button onClick={onFechar} className="text-gray-400 hover:text-gray-700"><X size={18} /></button>
         </div>
+
+        <div className="px-5 pt-4">
+          {!ia && !iaLoading && (
+            <button onClick={gerarIA}
+              className="w-full flex items-center justify-center gap-2 text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 rounded-lg px-4 py-2.5">
+              <Sparkles size={15} /> Sugerir pedido com IA
+            </button>
+          )}
+          {iaLoading && (
+            <div className="flex items-center justify-center gap-2 text-sm text-brand-600 py-2.5">
+              <Sparkles size={15} className="animate-pulse" /> Gerando sugestão…
+            </div>
+          )}
+          {iaErro && <div className="text-sm text-red-500 py-2">{iaErro}</div>}
+          {ia && (
+            <div className="border border-brand-200 bg-brand-50 rounded-lg p-4 space-y-3">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-brand-700">
+                <Sparkles size={13} /> Análise da IA
+              </div>
+              <p className="text-sm text-gray-700">{ia.resumo}</p>
+              {ia.sugestao?.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1.5">Sugestão de pedido:</p>
+                  <div className="space-y-1">
+                    {ia.sugestao.map((s: any, i: number) => (
+                      <div key={i} className="flex items-center gap-2 text-sm text-gray-700">
+                        <span className="text-brand-600 font-semibold">{s.quantidade}x</span> {s.produto}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {ia.observacao && (
+                <p className="text-xs text-gray-500 italic border-t border-brand-200 pt-2">💡 {ia.observacao}</p>
+              )}
+              <button onClick={gerarIA} className="text-xs text-brand-600 hover:text-brand-700 underline">Gerar novamente</button>
+            </div>
+          )}
+        </div>
+
         <div className="p-5 space-y-4">
           {isLoading ? (
             <div className="text-sm text-gray-400">Carregando…</div>
