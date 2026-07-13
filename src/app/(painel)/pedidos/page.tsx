@@ -82,6 +82,7 @@ export default function PedidosPage() {
   const [criandoPedido, setCriandoPedido] = useState(false)
   const [descontoModo, setDescontoModo] = useState<'pct' | 'rs'>('pct')
   const { usuario } = useAuth()
+  const podeOperar = usuario?.perfil === "ADMIN" || usuario?.perfil === "REPRESENTANTE"
 
 
   const { data, isLoading } = useQuery({
@@ -206,7 +207,7 @@ export default function PedidosPage() {
       <div className={clsx('flex-1 flex flex-col overflow-hidden transition-all', detalheId ? 'max-w-[60%]' : '')}>
         {/* Topbar */}
         <div className="bg-white border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between"><h1 className="text-base font-semibold text-gray-900">Pedidos</h1>{usuario?.perfil === "ADMIN" && (<button onClick={() => setCriandoPedido(true)} className="flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs px-3 py-1.5 rounded font-medium"><Plus size={14} />Novo pedido</button>)}</div>
+          <div className="flex items-center justify-between"><h1 className="text-base font-semibold text-gray-900">Pedidos</h1>{podeOperar && (<button onClick={() => setCriandoPedido(true)} className="flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs px-3 py-1.5 rounded font-medium"><Plus size={14} />Novo pedido</button>)}</div>
         </div>
 
         {/* Filtros */}
@@ -320,7 +321,7 @@ export default function PedidosPage() {
               <div className="text-sm font-semibold text-gray-900">{detalhe.id.slice(0, 8).toUpperCase()}</div>
               <div className="text-xs text-gray-400 mt-0.5">{detalhe.cliente?.razaoSocial}</div>
             </div>
-            <div className="flex items-center gap-2">{usuario?.perfil === "ADMIN" && (<button onClick={() => { if (confirm("Duplicar este pedido? Sera criado um novo orcamento com os mesmos itens.")) duplicar.mutate(detalhe.id) }} disabled={duplicar.isPending} className="text-xs px-2.5 py-1 rounded border bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100">Duplicar</button>)}{usuario?.perfil === "ADMIN" && detalhe.status !== "FATURADO" && (<button onClick={() => setModoEdicao(!modoEdicao)} className={clsx("text-xs px-2.5 py-1 rounded border", modoEdicao ? "bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100" : "bg-brand-50 border-brand-200 text-brand-700 hover:bg-brand-100")}>{modoEdicao ? "Cancelar edição" : "Editar"}</button>)}<button onClick={() => { setDetalheId(null); setModoEdicao(false) }} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button></div>
+            <div className="flex items-center gap-2">{podeOperar && (<button onClick={() => { if (confirm("Duplicar este pedido? Sera criado um novo orcamento com os mesmos itens.")) duplicar.mutate(detalhe.id) }} disabled={duplicar.isPending} className="text-xs px-2.5 py-1 rounded border bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100">Duplicar</button>)}{podeOperar && detalhe.status !== "FATURADO" && (<button onClick={() => setModoEdicao(!modoEdicao)} className={clsx("text-xs px-2.5 py-1 rounded border", modoEdicao ? "bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100" : "bg-brand-50 border-brand-200 text-brand-700 hover:bg-brand-100")}>{modoEdicao ? "Cancelar edição" : "Editar"}</button>)}<button onClick={() => { setDetalheId(null); setModoEdicao(false) }} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button></div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-5 space-y-5">
@@ -568,7 +569,7 @@ export default function PedidosPage() {
 
           {/* Ações */}
           <div className="p-4 border-t border-gray-100 space-y-2">
-            {detalhe.status === 'ORCAMENTO' && usuario?.perfil === 'ADMIN' && (
+            {detalhe.status === 'ORCAMENTO' && podeOperar && (
               <button className="btn-primary w-full flex items-center justify-center gap-2"
                 onClick={() => enviarParaAprovacao.mutate(detalhe.id)} disabled={enviarParaAprovacao.isPending}>
                 {enviarParaAprovacao.isPending ? <RefreshCw size={14} className="animate-spin" /> : null}
