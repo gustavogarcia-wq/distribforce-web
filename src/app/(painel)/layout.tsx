@@ -6,7 +6,7 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import {
   LayoutDashboard, ShoppingCart, Users, Building2,
-  Target, BarChart2, Settings, LogOut, Package, Tag, Gift, UserX
+  Target, BarChart2, Settings, LogOut, Package, Tag, Gift, UserX, Sparkles
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -16,6 +16,7 @@ const navItems = [
   { href: '/vendedores',     label: 'Vendedores',       icon: Users },
   { href: '/clientes',       label: 'Clientes',         icon: Building2 },
   { href: '/clientes-inativos', label: 'Clientes inativos', icon: UserX },
+  { href: '/pergunte',       label: 'Pergunte ao TForce', icon: Sparkles },
   { href: '/produtos',       label: 'Produtos',         icon: Package },
   { href: '/tabelas',        label: 'Tabelas de preço', icon: Tag },
   { href: '/combos',         label: 'Combos',           icon: Gift },
