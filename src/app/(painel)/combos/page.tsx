@@ -49,6 +49,26 @@ function ListaCombos({ onSelecionar, onNovo, onDuplicar }: { onSelecionar: (id: 
     mutationFn: (id: string) => api.delete(`/combos/${id}`),
     onSuccess: () => { toast.success('Combo desativado'); qc.invalidateQueries({ queryKey: ['combos'] }) },
   })
+  // filtros
+  const [fStatus, setFStatus] = useState<'todos' | 'ativos' | 'inativos'>('todos')
+  const [fTabela, setFTabela] = useState<string>('')
+  const [fProduto, setFProduto] = useState<string>('')
+  const [fNome, setFNome] = useState<string>('')
+  const { data: tabelasFiltro } = useQuery({
+    queryKey: ['tabelas'],
+    queryFn: () => api.get('/tabelas').then(r => r.data),
+  })
+  const combosFiltrados = (combos ?? []).filter((c: any) => {
+    if (fStatus === 'ativos' && !c.ativo) return false
+    if (fStatus === 'inativos' && c.ativo) return false
+    if (fTabela && String(c.tabelaId ?? c.tabela?.id ?? '') !== fTabela) return false
+    if (fNome && !String(c.nome ?? '').toLowerCase().includes(fNome.toLowerCase())) return false
+    if (fProduto) {
+      const temProd = (c.itens ?? []).some((i: any) => String(i.produto?.nome ?? '').toLowerCase().includes(fProduto.toLowerCase()))
+      if (!temProd) return false
+    }
+    return true
+  })
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -62,6 +82,23 @@ function ListaCombos({ onSelecionar, onNovo, onDuplicar }: { onSelecionar: (id: 
         </button>
       </div>
 
+      <div className="bg-white border-b border-gray-100 px-6 py-3 flex items-center gap-3 flex-wrap">
+        <select value={fStatus} onChange={e => setFStatus(e.target.value as any)} className="text-xs border border-gray-200 rounded px-2 py-1.5 text-gray-700">
+          <option value="todos">Todos os status</option>
+          <option value="ativos">Somente ativos</option>
+          <option value="inativos">Somente inativos</option>
+        </select>
+        <select value={fTabela} onChange={e => setFTabela(e.target.value)} className="text-xs border border-gray-200 rounded px-2 py-1.5 text-gray-700">
+          <option value="">Todas as tabelas</option>
+          {(tabelasFiltro ?? []).map((t: any) => <option key={t.id} value={t.id}>{t.nome}</option>)}
+        </select>
+        <input value={fProduto} onChange={e => setFProduto(e.target.value)} placeholder="Filtrar por produto..." className="text-xs border border-gray-200 rounded px-2 py-1.5 text-gray-700 w-44" />
+        <input value={fNome} onChange={e => setFNome(e.target.value)} placeholder="Buscar por nome..." className="text-xs border border-gray-200 rounded px-2 py-1.5 text-gray-700 w-40" />
+        {(fStatus !== 'todos' || fTabela || fProduto || fNome) && (
+          <button onClick={() => { setFStatus('todos'); setFTabela(''); setFProduto(''); setFNome('') }} className="text-xs text-brand-600 hover:underline">Limpar filtros</button>
+        )}
+        <span className="text-xs text-gray-400 ml-auto">{combosFiltrados.length} combo(s)</span>
+      </div>
       <div className="flex-1 overflow-y-auto p-6">
         {isLoading ? (
           <div className="flex items-center justify-center h-32">
@@ -69,7 +106,7 @@ function ListaCombos({ onSelecionar, onNovo, onDuplicar }: { onSelecionar: (id: 
               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="32" strokeLinecap="round"/>
             </svg>
           </div>
-        ) : !combos?.length ? (
+        ) : !combosFiltrados.length ? (
           <div className="flex flex-col items-center justify-center h-48 text-gray-400">
             <Gift size={32} strokeWidth={1} />
             <p className="text-sm mt-2">Nenhum combo criado ainda</p>
@@ -77,7 +114,7 @@ function ListaCombos({ onSelecionar, onNovo, onDuplicar }: { onSelecionar: (id: 
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3">
-            {combos.map((c: any) => {
+            {combosFiltrados.map((c: any) => {
               const itens: any[] = c.itens ?? []
               const nFixos = itens.filter(i => i.tipo === 'FIXO').length
               const variaveis = itens.filter(i => i.tipo === 'VARIAVEL')
