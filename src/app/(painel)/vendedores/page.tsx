@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { toast } from 'sonner'
@@ -112,24 +112,26 @@ function FormVendedor({ usuarioId, onVoltar }: { usuarioId?: string; onVoltar: (
   })
   const [carregado, setCarregado] = useState(false)
 
-  useQuery({
+  const { data: usuarioDetalhe } = useQuery({
     queryKey: ['usuario-detalhe', usuarioId],
     queryFn: () => api.get(`/usuarios/${usuarioId}`).then(r => r.data),
     enabled: isEdit && !carregado,
-    onSuccess: (data: any) => {
-      setForm({
-        nome:       data.nome ?? '',
-        email:      data.email ?? '',
-        senha:      '',
-        perfil:     data.perfil ?? 'REPRESENTANTE',
-        telefone:   data.vendedor?.telefone ?? '',
-        estados:    data.vendedor?.estados?.length ? data.vendedor.estados : [data.vendedor?.regiao?.nome ?? 'MG'],
-        metaMensal: data.vendedor?.metaMensal ? String(Math.round(Number(data.vendedor.metaMensal))) : '',
-        ativo:      data.ativo ?? true,
-      })
-      setCarregado(true)
-    }
-  } as any)
+  })
+  useEffect(() => {
+    if (!usuarioDetalhe || carregado) return
+    const data: any = usuarioDetalhe
+    setForm({
+      nome:       data.nome ?? '',
+      email:      data.email ?? '',
+      senha:      '',
+      perfil:     data.perfil ?? 'REPRESENTANTE',
+      telefone:   data.vendedor?.telefone ?? '',
+      estados:    data.vendedor?.estados?.length ? data.vendedor.estados : [data.vendedor?.regiao?.nome ?? 'MG'],
+      metaMensal: data.vendedor?.metaMensal ? String(Math.round(Number(data.vendedor.metaMensal))) : '',
+      ativo:      data.ativo ?? true,
+    })
+    setCarregado(true)
+  }, [usuarioDetalhe, carregado])
 
   const { data: clientesData } = useQuery({
     queryKey: ['clientes-carteira', usuarioId, buscaCliente],
