@@ -143,8 +143,13 @@ function FormVendedor({ usuarioId, onVoltar }: { usuarioId?: string; onVoltar: (
     mutationFn: () => isEdit
       ? api.patch(`/usuarios/${usuarioId}`, {
           nome:       form.nome,
+          email:      form.email,
+          perfil:     form.perfil,
+          telefone:   form.telefone || undefined,
+          estados:    form.estados,
+          metaMensal: form.metaMensal ? Number(form.metaMensal) : 0,
           ativo:      form.ativo,
-          ...(form.senha ? { senhaHash: form.senha } : {}),
+          ...(form.senha ? { senha: form.senha } : {}),
         })
       : api.post('/usuarios', {
           nome:       form.nome,
@@ -205,9 +210,8 @@ function FormVendedor({ usuarioId, onVoltar }: { usuarioId?: string; onVoltar: (
                 <div>
                   <label className="label">Email *</label>
                   <input type="email" className="input" placeholder="email@empresa.com"
-                    value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
-                    disabled={isEdit} />
-                  {isEdit && <p className="text-xs text-gray-400 mt-1">Email não pode ser alterado</p>}
+                    value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} />
+                  {isEdit && <p className="text-xs text-gray-400 mt-1">Email é o login do vendedor — alterar muda o acesso dele.</p>}
                 </div>
                 <div>
                   <label className="label">Telefone / WhatsApp</label>
@@ -223,8 +227,7 @@ function FormVendedor({ usuarioId, onVoltar }: { usuarioId?: string; onVoltar: (
                 <div>
                   <label className="label">Perfil de acesso *</label>
                   <select className="input" value={form.perfil}
-                    onChange={e => setForm(p => ({ ...p, perfil: e.target.value }))}
-                    disabled={isEdit}>
+                    onChange={e => setForm(p => ({ ...p, perfil: e.target.value }))}>
                     {PERFIS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
                   </select>
                 </div>
