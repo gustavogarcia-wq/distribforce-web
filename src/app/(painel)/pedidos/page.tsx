@@ -265,7 +265,14 @@ export default function PedidosPage() {
                   <tr key={p.id} className={clsx('hover:bg-gray-50 transition-colors cursor-pointer', detalheId === p.id && 'bg-brand-50', p.status === 'CONFIRMADO' && 'bg-green-50/50')}
                     onClick={() => { setDetalheId(p.id === detalheId ? null : p.id); setModoEdicao(false) }}>
                     <td className="px-4 py-3 font-mono text-gray-500">{p.id.slice(0, 8).toUpperCase()}</td>
-                    <td className="px-4 py-3 font-medium text-gray-900 max-w-[140px] truncate">{p.cliente?.razaoSocial}</td>
+                    <td className="px-4 py-3 max-w-[180px]">
+                      <div className="font-medium text-gray-900 truncate">{p.cliente?.razaoSocial}</div>
+                      {(p.cliente?.enderecoCidade || p.cliente?.enderecoEstado) && (
+                        <div className="text-xs text-gray-400 truncate">
+                          {[p.cliente?.enderecoCidade, p.cliente?.enderecoEstado].filter(Boolean).join(" · ")}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-gray-600 max-w-[120px] truncate">{p.vendedor?.usuario?.nome}</td>
                     <td className="px-4 py-3 font-medium text-gray-900">{fmt(p.total)}</td>
                     {usuario?.perfil === "ADMIN" && <MargemCell p={p} />}
