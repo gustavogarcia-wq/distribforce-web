@@ -373,6 +373,62 @@ export default function PedidosPage() {
               </div>
             </div>
 
+            {/* Linha do tempo: quem fez o que, e quando */}
+            {detalhe.historico?.length > 0 && (() => {
+              const fmt = (d: string) => new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
+              const inicio = new Date(detalhe.criadoEm).getTime()
+              const envio = detalhe.historico.find((h: any) => h.statusPara === 'AGUARDANDO_APROVACAO')
+              const duracao = (ms: number) => {
+                const min = Math.round(ms / 60000)
+                if (min < 60) return `${min} min`
+                const h = Math.floor(min / 60), r = min % 60
+                if (h < 24) return r ? `${h}h ${r}min` : `${h}h`
+                const d = Math.floor(h / 24)
+                return `${d}d ${h % 24}h`
+              }
+              return (
+                <div>
+                  <div className="text-xs font-medium text-gray-500 mb-3">Histórico</div>
+                  {envio && (
+                    <div className="mb-3 px-3 py-2 rounded bg-brand-50 border border-brand-100">
+                      <div className="text-xs text-brand-700">
+                        <span className="font-medium">Negociação:</span> {duracao(new Date(envio.criadoEm).getTime() - inicio)}
+                        <span className="text-brand-500"> (do início até enviar para aprovação)</span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="space-y-0">
+                    <div className="flex gap-3">
+                      <div className="flex flex-col items-center">
+                        <div className="w-2 h-2 rounded-full bg-brand-600 mt-1.5" />
+                        <div className="w-px flex-1 bg-gray-200 my-1" />
+                      </div>
+                      <div className="pb-3 flex-1">
+                        <div className="text-xs font-medium text-gray-900">Negociação iniciada</div>
+                        <div className="text-xs text-gray-400">{fmt(detalhe.criadoEm)}</div>
+                      </div>
+                    </div>
+                    {detalhe.historico.map((h: any, i: number) => (
+                      <div key={h.id} className="flex gap-3">
+                        <div className="flex flex-col items-center">
+                          <div className={clsx('w-2 h-2 rounded-full mt-1.5', h.statusPara === 'CANCELADO' ? 'bg-red-500' : 'bg-brand-600')} />
+                          {i < detalhe.historico.length - 1 && <div className="w-px flex-1 bg-gray-200 my-1" />}
+                        </div>
+                        <div className="pb-3 flex-1">
+                          <div className="text-xs font-medium text-gray-900">
+                            {h.statusDe ? `${STATUS_LABELS[h.statusDe] ?? h.statusDe} → ` : ''}{STATUS_LABELS[h.statusPara] ?? h.statusPara}
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            {fmt(h.criadoEm)} · {h.usuario?.nome ?? '—'}
+                          </div>
+                          {h.observacao && <div className="text-xs text-gray-500 mt-0.5 italic">{h.observacao}</div>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
             {/* Info */}
             <div className="grid grid-cols-2 gap-3">
               <div>
