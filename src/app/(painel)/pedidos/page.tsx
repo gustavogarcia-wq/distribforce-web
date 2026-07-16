@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { toast } from 'sonner'
-import { Search, Send, Eye, RefreshCw, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { Search, Send, Eye, RefreshCw, ChevronLeft, ChevronRight, Plus, Ban } from 'lucide-react'
 import clsx from 'clsx'
 import NovoPedidoPanel from './NovoPedidoPanel'
 
@@ -83,6 +83,8 @@ export default function PedidosPage() {
   const [descontoModo, setDescontoModo] = useState<'pct' | 'rs'>('pct')
   const { usuario } = useAuth()
   const podeOperar = usuario?.perfil === "ADMIN" || usuario?.perfil === "REPRESENTANTE"
+  // Cancelar segue a regra do backend: ADMIN, GESTOR e OPERADOR (representante nao cancela).
+  const podeCancelar = ["ADMIN", "GESTOR", "OPERADOR"].includes(usuario?.perfil ?? "")
 
 
   const { data, isLoading } = useQuery({
@@ -158,6 +160,11 @@ export default function PedidosPage() {
     onError: () => toast.error('Erro ao confirmar pedido'),
   })
 
+  const cancelar = useMutation({
+    mutationFn: (id: string) => api.patch(`/pedidos/${id}/status`, { status: 'CANCELADO', observacao: 'Cancelado pelo gestor' }),
+    onSuccess: () => { toast.success('Pedido cancelado.'); qc.invalidateQueries({ queryKey: ['pedidos'] }); if (detalheId) qc.invalidateQueries({ queryKey: ['pedido', detalheId] }) },
+    onError: (e: any) => toast.error(e.response?.data?.error ?? 'Erro ao cancelar pedido'),
+  })
   const enviarOmie = useMutation({
     mutationFn: ({ id, base }: { id: string; base: 'MG' | 'SP' }) => api.post(`/pedidos/${id}/omie`, { base }),
     onSuccess: () => { toast.success('Pedido enviado ao Omie!'); qc.invalidateQueries({ queryKey: ['pedidos'] }); if (detalheId) qc.invalidateQueries({ queryKey: ['pedido', detalheId] }) },
@@ -293,6 +300,15 @@ export default function PedidosPage() {
                           <button className="badge-green cursor-pointer hover:bg-green-100 transition-colors px-2 py-1 flex items-center gap-1"
                             onClick={() => enviarOmie.mutate({ id: p.id, base: 'SP' })}>
                             <Send size={10} /> SP
+                          </button>
+                        )}
+                        {p.status !== 'FATURADO' && p.status !== 'CANCELADO' && podeCancelar && (
+                          <button className="badge-gray cursor-pointer hover:bg-red-100 hover:text-red-600 transition-colors p-1"
+                            title="Cancelar pedido"
+                            onClick={() => {
+                              if (confirm(`Cancelar o pedido de ${p.cliente?.razaoSocial ?? 'cliente'}?\n\nEle sai das listas ativas mas continua no histórico. Esta ação não pode ser desfeita.`)) cancelar.mutate(p.id)
+                            }}>
+                            <Ban size={12} />
                           </button>
                         )}
                         <button className="badge-gray cursor-pointer hover:bg-gray-200 transition-colors p-1"
